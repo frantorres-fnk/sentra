@@ -1,13 +1,50 @@
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const Dashboard = () => {
   const { user } = useAuth()
+  const [metricas, setMetricas] = useState({
+    clientes: 0,
+    pedidosHoy: 0,
+    stockBajo: 0,
+    cajaHoy: 0,
+  })
+
+  useEffect(() => {
+    const fetchMetricas = async () => {
+      const hoy = new Date().toISOString().split('T')[0]
+
+      const [
+        { count: clientes },
+        { count: pedidosHoy },
+        { data: stockData },
+      ] = await Promise.all([
+        supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('activo', true),
+        supabase.from('pedidos').select('*', { count: 'exact', head: true }).gte('fecha_pedido', hoy),
+        supabase.from('stock').select('cantidad, stock_minimo'),
+      ])
+
+      const stockBajo = (stockData || []).filter(s =>
+        Number(s.stock_minimo) > 0 && Number(s.cantidad) <= Number(s.stock_minimo)
+      ).length
+
+      setMetricas({
+        clientes: clientes || 0,
+        pedidosHoy: pedidosHoy || 0,
+        stockBajo,
+        cajaHoy: 0,
+      })
+    }
+
+    fetchMetricas()
+  }, [])
 
   const cards = [
-    { label: 'Clientes activos', value: '0', icon: '👥' },
-    { label: 'Pedidos hoy', value: '0', icon: '🛒' },
-    { label: 'Productos con stock bajo', value: '0', icon: '📦' },
-    { label: 'Caja del día', value: '$0', icon: '💰' },
+    { label: 'Clientes activos', value: metricas.clientes, icon: '👥' },
+    { label: 'Pedidos hoy', value: metricas.pedidosHoy, icon: '🛒' },
+    { label: 'Productos con stock bajo', value: metricas.stockBajo, icon: '📦' },
+    { label: 'Caja del día', value: `$${metricas.cajaHoy.toLocaleString('es-AR')}`, icon: '💰' },
   ]
 
   const nombre = user?.email?.split('@')[0] || 'usuario'
