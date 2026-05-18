@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import PedidoModal from '../components/PedidoModal'
+import PedidoDetalle from '../components/PedidoDetalle'
 
 const estadoConfig = {
   borrador:   { label: 'Borrador',    color: 'bg-gray-100 text-gray-600' },
@@ -17,6 +18,7 @@ const Pedidos = () => {
   const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
 
   const fetchPedidos = async () => {
     setLoading(true)
@@ -41,6 +43,8 @@ const Pedidos = () => {
     ? pedidos
     : pedidos.filter(p => p.estado === filtroEstado)
 
+  const pendientes = pedidos.filter(p => p.estado === 'pendiente').length
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -48,12 +52,19 @@ const Pedidos = () => {
           <h2 className="text-2xl font-bold text-[#0F1F3D]">Pedidos</h2>
           <p className="text-gray-500 mt-1">Gestioná los pedidos de tus clientes</p>
         </div>
-        <button
-          onClick={() => setModalAbierto(true)}
-          className="bg-[#00C896] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00b386] transition-colors"
-        >
-          + Nuevo pedido
-        </button>
+        <div className="flex items-center gap-3">
+          {pendientes > 0 && (
+            <div className="bg-yellow-50 text-yellow-600 px-4 py-2 rounded-lg text-sm font-medium">
+              ⏳ {pendientes} pedido{pendientes > 1 ? 's' : ''} pendiente{pendientes > 1 ? 's' : ''}
+            </div>
+          )}
+          <button
+            onClick={() => setModalAbierto(true)}
+            className="bg-[#00C896] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00b386] transition-colors"
+          >
+            + Nuevo pedido
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-4 flex-wrap">
@@ -97,7 +108,11 @@ const Pedidos = () => {
               </tr>
             ) : (
               pedidosFiltrados.map((p) => (
-                <tr key={p.id} className="border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer">
+                <tr
+                  key={p.id}
+                  onClick={() => setPedidoSeleccionado(p)}
+                  className="border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <td className="px-5 py-3.5 text-sm font-medium text-[#0F1F3D]">
                     #{p.id.slice(-6).toUpperCase()}
                   </td>
@@ -125,6 +140,17 @@ const Pedidos = () => {
         <PedidoModal
           onClose={() => setModalAbierto(false)}
           onGuardado={fetchPedidos}
+        />
+      )}
+
+      {pedidoSeleccionado && (
+        <PedidoDetalle
+          pedido={pedidoSeleccionado}
+          onClose={() => setPedidoSeleccionado(null)}
+          onActualizado={() => {
+            fetchPedidos()
+            setPedidoSeleccionado(null)
+          }}
         />
       )}
     </div>
