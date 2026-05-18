@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import ClienteModal from '../components/ClienteModal'
+import ClienteDetalle from '../components/ClienteDetalle'
 
 const Clientes = () => {
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
 
   const fetchClientes = async () => {
     setLoading(true)
@@ -88,7 +90,11 @@ const Clientes = () => {
               </tr>
             ) : (
               clientesFiltrados.map((c) => (
-                <tr key={c.id} className="border-t border-gray-50 hover:bg-gray-50 transition-colors">
+                <tr
+                  key={c.id}
+                  onClick={() => setClienteSeleccionado(c)}
+                  className="border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <td className="px-5 py-3.5">
                     <p className="text-sm font-medium text-[#0F1F3D]">{c.razon_social}</p>
                     {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
@@ -119,6 +125,17 @@ const Clientes = () => {
         <ClienteModal
           onClose={() => setModalAbierto(false)}
           onGuardado={fetchClientes}
+        />
+      )}
+
+      {clienteSeleccionado && (
+        <ClienteDetalle
+          cliente={clienteSeleccionado}
+          onClose={() => setClienteSeleccionado(null)}
+          onActualizado={() => {
+            fetchClientes()
+            setClienteSeleccionado(null)
+          }}
         />
       )}
     </div>
