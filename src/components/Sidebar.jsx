@@ -4,6 +4,7 @@ const menu = [
   { label: 'Dashboard', path: '/', icon: '📊' },
   { label: 'Clientes', path: '/clientes', icon: '👥' },
   { label: 'Productos', path: '/productos', icon: '📦' },
+  { label: 'Stock', path: '/stock', icon: '🏭' },
   { label: 'Pedidos', path: '/pedidos', icon: '🛒' },
   { label: 'Facturación', path: '/facturacion', icon: '🧾' },
   { label: 'Cobranzas', path: '/cobranzas', icon: '💰' },
