@@ -27,7 +27,11 @@ const Login = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-xl shadow-sm w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-[#0F1F3D]">SENTRA</h1>
+          <img
+            src="/sentra-logo.png"
+            alt="SENTRA"
+            className="h-14 mx-auto mb-3"
+          />
           <p className="text-gray-500 mt-1">Gestión inteligente del negocio</p>
         </div>
 
