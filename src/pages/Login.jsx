@@ -30,7 +30,7 @@ const Login = () => {
           <img
             src="/sentra-logo.png"
             alt="SENTRA"
-            className="h-14 mx-auto mb-3"
+            className="h-50 mx-auto mb-3"
           />
           <p className="text-gray-500 mt-1">Gestión inteligente del negocio</p>
         </div>
