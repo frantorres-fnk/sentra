@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import StockModal from '../components/StockModal'
 
 const Stock = () => {
   const [stockItems, setStockItems] = useState([])
@@ -7,6 +8,7 @@ const Stock = () => {
   const [depositoSeleccionado, setDepositoSeleccionado] = useState('todos')
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [modalAbierto, setModalAbierto] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -23,10 +25,10 @@ const Stock = () => {
       .from('stock')
       .select(`
         *,
-        productos (id, nombre, codigo, categoria, precio_venta, stock_minimo),
+        productos (id, nombre, codigo, categoria, precio_venta),
         depositos (id, nombre)
       `)
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
 
     setStockItems(stock || [])
     setLoading(false)
@@ -56,11 +58,19 @@ const Stock = () => {
           <h2 className="text-2xl font-bold text-[#0F1F3D]">Stock</h2>
           <p className="text-gray-500 mt-1">Control de inventario por depósito</p>
         </div>
-        {stockBajo > 0 && (
-          <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium">
-            ⚠️ {stockBajo} producto{stockBajo > 1 ? 's' : ''} con stock bajo
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {stockBajo > 0 && (
+            <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium">
+              ⚠️ {stockBajo} producto{stockBajo > 1 ? 's' : ''} con stock bajo
+            </div>
+          )}
+          <button
+            onClick={() => setModalAbierto(true)}
+            className="bg-[#00C896] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00b386] transition-colors"
+          >
+            + Cargar stock
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-4 mb-4">
@@ -126,13 +136,9 @@ const Stock = () => {
                     <td className="px-5 py-3.5 text-sm font-medium text-[#0F1F3D]">{disponible.toLocaleString('es-AR')}</td>
                     <td className="px-5 py-3.5">
                       {esBajo ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-600">
-                          Stock bajo
-                        </span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-600">Stock bajo</span>
                       ) : (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">
-                          OK
-                        </span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">OK</span>
                       )}
                     </td>
                   </tr>
@@ -142,6 +148,13 @@ const Stock = () => {
           </tbody>
         </table>
       </div>
+
+      {modalAbierto && (
+        <StockModal
+          onClose={() => setModalAbierto(false)}
+          onGuardado={fetchData}
+        />
+      )}
     </div>
   )
 }
