@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Clientes from './pages/Clientes'
+import Productos from './pages/Productos'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -10,24 +11,19 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" replace />
 }
 
+const Layout = ({ children }) => (
+  <ProtectedRoute>
+    <AppLayout>{children}</AppLayout>
+  </ProtectedRoute>
+)
+
 const App = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <Dashboard />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/clientes" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <Clientes />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
+      <Route path="/" element={<Layout><Dashboard /></Layout>} />
+      <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
+      <Route path="/productos" element={<Layout><Productos /></Layout>} />
     </Routes>
   )
 }
