@@ -19,21 +19,25 @@ const Dashboard = () => {
         { count: clientes },
         { count: pedidosHoy },
         { data: stockData },
+        { data: cobrosHoy },
       ] = await Promise.all([
         supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('activo', true),
         supabase.from('pedidos').select('*', { count: 'exact', head: true }).gte('fecha_pedido', hoy),
         supabase.from('stock').select('cantidad, stock_minimo'),
+        supabase.from('cobros').select('monto').eq('estado', 'aprobado').gte('aprobado_at', hoy),
       ])
 
       const stockBajo = (stockData || []).filter(s =>
         Number(s.stock_minimo) > 0 && Number(s.cantidad) <= Number(s.stock_minimo)
       ).length
 
+      const cajaHoy = (cobrosHoy || []).reduce((acc, c) => acc + Number(c.monto), 0)
+
       setMetricas({
         clientes: clientes || 0,
         pedidosHoy: pedidosHoy || 0,
         stockBajo,
-        cajaHoy: 0,
+        cajaHoy,
       })
     }
 
