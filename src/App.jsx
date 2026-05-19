@@ -10,6 +10,7 @@ import Proveedores from './pages/Proveedores'
 import Cobranzas from './pages/Cobranzas'
 import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
+import Facturacion from './pages/Facturacion'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,7 @@ const App = () => {
       <Route path="/cobranzas" element={<Layout><Cobranzas /></Layout>} />
       <Route path="/reportes" element={<Layout><Reportes /></Layout>} />
       <Route path="/configuracion" element={<Layout><Configuracion /></Layout>} />
+      <Route path="/facturacion" element={<Layout><Facturacion /></Layout>} />
     </Routes>
   )
 }
