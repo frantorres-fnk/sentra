@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import StockModal from '../components/StockModal'
+import StockEditar from '../components/StockEditar'
+import { useRol } from '../hooks/useRol'
 
 const Stock = () => {
   const [stockItems, setStockItems] = useState([])
@@ -9,6 +11,8 @@ const Stock = () => {
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [itemSeleccionado, setItemSeleccionado] = useState(null)
+  const { rol } = useRol()
 
   const fetchData = async () => {
     setLoading(true)
@@ -50,6 +54,8 @@ const Stock = () => {
   const stockBajo = stockItems.filter(s =>
     Number(s.cantidad) <= Number(s.stock_minimo) && Number(s.stock_minimo) > 0
   ).length
+
+  const esDueno = rol === 'Dueño'
 
   return (
     <div>
@@ -103,18 +109,19 @@ const Stock = () => {
               <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reservado</th>
               <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disponible</th>
               <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+              {esDueno && <th className="px-5 py-3.5"></th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
                   Cargando...
                 </td>
               </tr>
             ) : stockFiltrado.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
                   {busqueda ? 'No se encontraron productos.' : 'No hay stock cargado todavía.'}
                 </td>
               </tr>
@@ -141,6 +148,16 @@ const Stock = () => {
                         <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">OK</span>
                       )}
                     </td>
+                    {esDueno && (
+                      <td className="px-5 py-3.5">
+                        <button
+                          onClick={() => setItemSeleccionado(s)}
+                          className="text-xs text-[#00C896] hover:underline"
+                        >
+                          Ajustar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })
@@ -153,6 +170,17 @@ const Stock = () => {
         <StockModal
           onClose={() => setModalAbierto(false)}
           onGuardado={fetchData}
+        />
+      )}
+
+      {itemSeleccionado && (
+        <StockEditar
+          item={itemSeleccionado}
+          onClose={() => setItemSeleccionado(null)}
+          onActualizado={() => {
+            fetchData()
+            setItemSeleccionado(null)
+          }}
         />
       )}
     </div>

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import ProductoModal from '../components/ProductoModal'
+import ProductoDetalle from '../components/ProductoDetalle'
 
 const Productos = () => {
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null)
 
   const fetchProductos = async () => {
     setLoading(true)
@@ -15,7 +17,7 @@ const Productos = () => {
       .select('*')
       .order('nombre', { ascending: true })
 
-    if (!error) setProductos(data)
+    if (!error) setProductos(data || [])
     setLoading(false)
   }
 
@@ -81,7 +83,11 @@ const Productos = () => {
               </tr>
             ) : (
               productosFiltrados.map((p) => (
-                <tr key={p.id} className="border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer">
+                <tr
+                  key={p.id}
+                  onClick={() => setProductoSeleccionado(p)}
+                  className="border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <td className="px-5 py-3.5">
                     <p className="text-sm font-medium text-[#0F1F3D]">{p.nombre}</p>
                     {p.descripcion && <p className="text-xs text-gray-400">{p.descripcion}</p>}
@@ -118,6 +124,17 @@ const Productos = () => {
         <ProductoModal
           onClose={() => setModalAbierto(false)}
           onGuardado={fetchProductos}
+        />
+      )}
+
+      {productoSeleccionado && (
+        <ProductoDetalle
+          producto={productoSeleccionado}
+          onClose={() => setProductoSeleccionado(null)}
+          onActualizado={() => {
+            fetchProductos()
+            setProductoSeleccionado(null)
+          }}
         />
       )}
     </div>

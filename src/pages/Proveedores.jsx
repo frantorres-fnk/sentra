@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import ProveedorModal from '../components/ProveedorModal'
+import ProveedorDetalle from '../components/ProveedorDetalle'
 
 const Proveedores = () => {
   const [proveedores, setProveedores] = useState([])
@@ -108,6 +109,17 @@ const Proveedores = () => {
         <ProveedorModal
           onClose={() => setModalAbierto(false)}
           onGuardado={fetchProveedores}
+        />
+      )}
+
+      {proveedorSeleccionado && (
+        <ProveedorDetalle
+          proveedor={proveedorSeleccionado}
+          onClose={() => setProveedorSeleccionado(null)}
+          onActualizado={() => {
+            fetchProveedores()
+            setProveedorSeleccionado(null)
+          }}
         />
       )}
     </div>
