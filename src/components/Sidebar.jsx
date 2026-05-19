@@ -2,16 +2,17 @@ import { NavLink } from 'react-router-dom'
 import { useRol } from '../hooks/useRol'
 
 const menu = [
-  { label: 'Dashboard',    path: '/',            icon: '📊', permiso: null },
-  { label: 'Clientes',     path: '/clientes',    icon: '👥', permiso: 'ver_clientes' },
-  { label: 'Productos',    path: '/productos',   icon: '📦', permiso: 'ver_stock' },
-  { label: 'Stock',        path: '/stock',       icon: '🏭', permiso: 'ver_stock' },
-  { label: 'Pedidos',      path: '/pedidos',     icon: '🛒', permiso: 'ver_pedidos' },
-  { label: 'Facturación',  path: '/facturacion', icon: '🧾', permiso: 'ver_facturacion' },
-  { label: 'Cobranzas',    path: '/cobranzas',   icon: '💰', permiso: 'ver_caja' },
-  { label: 'Proveedores',  path: '/proveedores', icon: '🏪', permiso: 'ver_proveedores' },
-  { label: 'Reportes',     path: '/reportes',    icon: '📈', permiso: 'ver_reportes' },
-  { label: 'Configuración',path: '/configuracion',icon: '⚙️', permiso: 'gestionar_usuarios' },
+  { label: 'Dashboard',     path: '/',              icon: '📊', permiso: null },
+  { label: 'Clientes',      path: '/clientes',      icon: '👥', permiso: 'ver_clientes' },
+  { label: 'Productos',     path: '/productos',     icon: '📦', permiso: 'ver_stock' },
+  { label: 'Stock',         path: '/stock',         icon: '🏭', permiso: 'ver_stock' },
+  { label: 'Pedidos',       path: '/pedidos',       icon: '🛒', permiso: 'ver_pedidos' },
+  { label: 'Facturación',   path: '/facturacion',   icon: '🧾', permiso: 'ver_facturacion' },
+  { label: 'Cobranzas',     path: '/cobranzas',     icon: '💰', permiso: 'ver_caja' },
+  { label: 'Proveedores',   path: '/proveedores',   icon: '🏪', permiso: 'ver_proveedores' },
+  { label: 'Reportes',      path: '/reportes',      icon: '📈', permiso: 'ver_reportes' },
+  { label: 'Caja Chica',    path: '/caja-chica',    icon: '🔒', permiso: 'ver_zona_privada' },
+  { label: 'Configuración', path: '/configuracion', icon: '⚙️', permiso: 'gestionar_usuarios' },
 ]
 
 const Sidebar = () => {

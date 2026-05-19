@@ -11,6 +11,7 @@ import Cobranzas from './pages/Cobranzas'
 import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
 import Facturacion from './pages/Facturacion'
+import CajaChica from './pages/CajaChica'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -38,6 +39,7 @@ const App = () => {
       <Route path="/reportes" element={<Layout><Reportes /></Layout>} />
       <Route path="/configuracion" element={<Layout><Configuracion /></Layout>} />
       <Route path="/facturacion" element={<Layout><Facturacion /></Layout>} />
+      <Route path="/caja-chica" element={<Layout><CajaChica /></Layout>} />
     </Routes>
   )
 }
