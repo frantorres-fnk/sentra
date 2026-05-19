@@ -7,6 +7,7 @@ import Productos from './pages/Productos'
 import Stock from './pages/Stock'
 import Pedidos from './pages/Pedidos'
 import Proveedores from './pages/Proveedores'
+import Cobranzas from './pages/Cobranzas'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -30,6 +31,7 @@ const App = () => {
       <Route path="/stock" element={<Layout><Stock /></Layout>} />
       <Route path="/pedidos" element={<Layout><Pedidos /></Layout>} />
       <Route path="/proveedores" element={<Layout><Proveedores /></Layout>} />
+      <Route path="/cobranzas" element={<Layout><Cobranzas /></Layout>} />
     </Routes>
   )
 }
