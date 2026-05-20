@@ -6,32 +6,35 @@ const SentraAIPanel = ({ onClose }) => {
   const [conversacion, setConversacion] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const consultarDatos = async (pregunta) => {
-    const q = pregunta.toLowerCase()
-    let contexto = ''
+  const consultarDatos = async () => {
+    const [
+      { data: clientes },
+      { data: stock },
+      { data: pedidos },
+      { data: cobros },
+      { data: proveedores },
+      { data: productos },
+      { data: operaciones },
+    ] = await Promise.all([
+      supabase.from('clientes').select('*').limit(100),
+      supabase.from('stock').select('*, productos(nombre, codigo, precio_venta, precio_costo)').limit(100),
+      supabase.from('pedidos').select('*, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)').order('fecha_pedido', { ascending: false }).limit(50),
+      supabase.from('cobros').select('*, clientes(razon_social)').order('created_at', { ascending: false }).limit(50),
+      supabase.from('proveedores').select('*').limit(50),
+      supabase.from('productos').select('*').limit(100),
+      supabase.from('operaciones_internas').select('*').order('created_at', { ascending: false }).limit(30),
+    ])
 
-    if (q.includes('cliente') || q.includes('debe') || q.includes('deuda') || q.includes('saldo') || q.includes('moroso')) {
-      const { data } = await supabase.from('clientes').select('razon_social, saldo_cc, activo, bloqueado, zona').order('saldo_cc', { ascending: false }).limit(20)
-      contexto += `\nCLIENTES:\n${JSON.stringify(data)}`
-    }
-    if (q.includes('stock') || q.includes('producto') || q.includes('inventario') || q.includes('queda')) {
-      const { data } = await supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo, precio_venta)').limit(30)
-      contexto += `\nSTOCK:\n${JSON.stringify(data)}`
-    }
-    if (q.includes('pedido') || q.includes('venta') || q.includes('vendí') || q.includes('vendi') || q.includes('pendiente')) {
-      const { data } = await supabase.from('pedidos').select('estado, total, fecha_pedido, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)').order('fecha_pedido', { ascending: false }).limit(20)
-      contexto += `\nPEDIDOS:\n${JSON.stringify(data)}`
-    }
-    if (q.includes('cobr') || q.includes('caja') || q.includes('pago') || q.includes('cobrado')) {
-      const { data } = await supabase.from('cobros').select('monto, estado, medio_pago, created_at, clientes(razon_social)').order('created_at', { ascending: false }).limit(20)
-      contexto += `\nCOBRANZAS:\n${JSON.stringify(data)}`
-    }
-    if (q.includes('proveedor')) {
-      const { data } = await supabase.from('proveedores').select('razon_social, saldo_cc, telefono, email').limit(20)
-      contexto += `\nPROVEEDORES:\n${JSON.stringify(data)}`
-    }
-
-    return contexto
+    return `
+CLIENTES: ${JSON.stringify(clientes)}
+STOCK: ${JSON.stringify(stock)}
+PEDIDOS: ${JSON.stringify(pedidos)}
+COBROS: ${JSON.stringify(cobros)}
+PROVEEDORES: ${JSON.stringify(proveedores)}
+PRODUCTOS: ${JSON.stringify(productos)}
+CAJA CHICA: ${JSON.stringify(operaciones)}
+FECHA HOY: ${new Date().toLocaleDateString('es-AR')}
+    `
   }
 
   const enviarMensaje = async () => {
@@ -44,21 +47,22 @@ const SentraAIPanel = ({ onClose }) => {
     setConversacion(nuevaConversacion)
 
     try {
-      const contexto = await consultarDatos(pregunta)
+      const contexto = await consultarDatos()
 
       const { data, error } = await supabase.functions.invoke('sentra-ai', {
         body: {
           system: `Sos SENTRA AI, el asistente inteligente de Eléctrica Urbano.
 Respondés en español rioplatense, de forma clara, directa y amigable.
-Tenés acceso a los datos reales del negocio.
+Tenés acceso a TODOS los datos reales del negocio.
 Cuando te pregunten por números, mostrá los datos concretos.
 Nunca inventés datos — solo usá lo que te dan en el contexto.
-Si no tenés datos suficientes, decilo claramente.
+Si no encontrás algo, buscá bien antes de decir que no existe.
 Usá emojis con moderación.
 Siempre que puedas, terminá con una sugerencia o acción concreta.
+Si te preguntan por un cliente específico, buscalo por nombre aunque esté mal escrito.
 
-DATOS ACTUALES DEL SISTEMA:
-${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
+DATOS COMPLETOS DEL SISTEMA:
+${contexto}`,
           messages: [{ role: 'user', content: pregunta }],
         },
       })
