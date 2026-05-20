@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Calculadora from '../components/Calculadora'
 import { useRol } from '../hooks/useRol'
+import SentraAIPanel from '../components/SentraAIPanel'
 
 const todosLosItems = [
   { label: 'Dashboard',     path: '/',              icon: '📊', permiso: null },
@@ -106,6 +107,7 @@ const MenuMas = ({ onClose }) => {
 const AppLayout = ({ children }) => {
   const { user, signOut } = useAuth()
   const [menuMasAbierto, setMenuMasAbierto] = useState(false)
+  const [aiAbierto, setAiAbierto] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -113,8 +115,14 @@ const AppLayout = ({ children }) => {
       {/* Navbar desktop */}
       <nav className="hidden md:flex bg-[#0F1F3D] px-6 py-1.5 justify-between items-center z-10">
         <img src="/sentra-logo.png" alt="SENTRA" className="h-20 w-auto brightness-0 invert" />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="text-sm text-gray-300">{user?.email}</span>
+          <button
+            onClick={() => setAiAbierto(true)}
+            className="flex items-center gap-2 bg-[#00C896] hover:bg-[#00b386] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          >
+            🤖 SENTRA AI
+          </button>
           <button
             onClick={signOut}
             className="text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors"
@@ -127,7 +135,20 @@ const AppLayout = ({ children }) => {
       {/* Navbar mobile */}
       <nav className="md:hidden bg-[#0F1F3D] px-4 py-2 flex justify-between items-center z-10">
         <img src="/sentra-logo.png" alt="SENTRA" className="h-14 w-auto brightness-0 invert" />
-        <span className="text-xs text-gray-400">{user?.email}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAiAbierto(true)}
+            className="flex items-center gap-1.5 bg-[#00C896] hover:bg-[#00b386] text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          >
+            🤖 AI
+          </button>
+          <button
+            onClick={signOut}
+            className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Salir
+          </button>
+        </div>
       </nav>
 
       <div className="flex flex-1">
@@ -142,6 +163,7 @@ const AppLayout = ({ children }) => {
       <Calculadora />
       <BottomNav onMasClick={() => setMenuMasAbierto(true)} />
       {menuMasAbierto && <MenuMas onClose={() => setMenuMasAbierto(false)} />}
+      {aiAbierto && <SentraAIPanel onClose={() => setAiAbierto(false)} />}
     </div>
   )
 }

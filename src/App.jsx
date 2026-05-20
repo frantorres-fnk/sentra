@@ -12,6 +12,7 @@ import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
 import Facturacion from './pages/Facturacion'
 import CajaChica from './pages/CajaChica'
+import SentraAI from './pages/SentraAI'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -40,6 +41,7 @@ const App = () => {
       <Route path="/configuracion" element={<Layout><Configuracion /></Layout>} />
       <Route path="/facturacion" element={<Layout><Facturacion /></Layout>} />
       <Route path="/caja-chica" element={<Layout><CajaChica /></Layout>} />
+      <Route path="/sentra-ai" element={<Layout><SentraAI /></Layout>} />
     </Routes>
   )
 }
