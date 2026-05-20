@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
+import Calculadora from '../components/Calculadora'
 
 const AppLayout = ({ children }) => {
   const { user, signOut } = useAuth()
@@ -24,6 +25,7 @@ const AppLayout = ({ children }) => {
           {children}
         </main>
       </div>
+      <Calculadora />
     </div>
   )
 }
