@@ -5,16 +5,12 @@ import { supabase } from '../lib/supabase'
 const Dashboard = () => {
   const { user } = useAuth()
   const [metricas, setMetricas] = useState({
-    clientes: 0,
-    pedidosHoy: 0,
-    stockBajo: 0,
-    cajaHoy: 0,
+    clientes: 0, pedidosHoy: 0, stockBajo: 0, cajaHoy: 0,
   })
 
   useEffect(() => {
     const fetchMetricas = async () => {
       const hoy = new Date().toISOString().split('T')[0]
-
       const [
         { count: clientes },
         { count: pedidosHoy },
@@ -32,23 +28,16 @@ const Dashboard = () => {
       ).length
 
       const cajaHoy = (cobrosHoy || []).reduce((acc, c) => acc + Number(c.monto), 0)
-
-      setMetricas({
-        clientes: clientes || 0,
-        pedidosHoy: pedidosHoy || 0,
-        stockBajo,
-        cajaHoy,
-      })
+      setMetricas({ clientes: clientes || 0, pedidosHoy: pedidosHoy || 0, stockBajo, cajaHoy })
     }
-
     fetchMetricas()
   }, [])
 
   const cards = [
-    { label: 'Clientes activos', value: metricas.clientes, icon: '👥' },
-    { label: 'Pedidos hoy', value: metricas.pedidosHoy, icon: '🛒' },
-    { label: 'Productos con stock bajo', value: metricas.stockBajo, icon: '📦' },
-    { label: 'Caja del día', value: `$${metricas.cajaHoy.toLocaleString('es-AR')}`, icon: '💰' },
+    { label: 'Clientes activos',        value: metricas.clientes,                                    icon: '👥' },
+    { label: 'Pedidos hoy',             value: metricas.pedidosHoy,                                  icon: '🛒' },
+    { label: 'Stock bajo',              value: metricas.stockBajo,                                   icon: '📦' },
+    { label: 'Caja del día',            value: `$${metricas.cajaHoy.toLocaleString('es-AR')}`,       icon: '💰' },
   ]
 
   const nombre = user?.email?.split('@')[0] || 'usuario'
@@ -56,23 +45,27 @@ const Dashboard = () => {
   const saludo = hora < 12 ? 'Buenos días' : hora < 18 ? 'Buenas tardes' : 'Buenas noches'
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#0F1F3D]">
+    <div className="h-full flex flex-col">
+
+      {/* Saludo */}
+      <div className="mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-[#0F1F3D]">
           {saludo}, {nombre} 👋
         </h2>
-        <p className="text-gray-500 mt-1">Esto es lo que está pasando hoy en tu negocio.</p>
+        <p className="text-gray-500 text-sm mt-0.5">Esto es lo que está pasando hoy en tu negocio.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Cards — 2x2 en mobile, 4 en desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {cards.map((card, i) => (
-          <div key={i} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div className="text-2xl mb-3">{card.icon}</div>
-            <p className="text-sm text-gray-500">{card.label}</p>
-            <p className="text-3xl font-bold text-[#0F1F3D] mt-1">{card.value}</p>
+          <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="text-xl mb-2">{card.icon}</div>
+            <p className="text-xs text-gray-500 leading-tight">{card.label}</p>
+            <p className="text-2xl font-bold text-[#0F1F3D] mt-1">{card.value}</p>
           </div>
         ))}
       </div>
+
     </div>
   )
 }

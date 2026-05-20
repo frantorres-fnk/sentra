@@ -46,7 +46,6 @@ const BottomNav = ({ onMasClick }) => {
           </NavLink>
         )
       })}
-      {/* Botón Más */}
       <button
         onClick={onMasClick}
         className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs text-gray-400 active:text-white transition-colors"
@@ -72,16 +71,12 @@ const MenuMas = ({ onClose }) => {
 
   return (
     <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Panel */}
       <div className="relative bg-white rounded-t-2xl shadow-2xl p-4 pb-8">
         <div className="flex justify-between items-center mb-4">
           <p className="text-sm font-semibold text-[#0F1F3D]">Todos los módulos</p>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
-
         <div className="grid grid-cols-3 gap-3">
           {extras.map((item) => {
             if (item.permiso && !puedeVer(item.permiso)) return null
@@ -97,7 +92,6 @@ const MenuMas = ({ onClose }) => {
             )
           })}
         </div>
-
         <button
           onClick={() => { signOut(); onClose() }}
           className="mt-4 w-full py-3 rounded-xl border border-red-100 text-red-500 text-sm font-medium active:bg-red-50 transition-colors"
@@ -132,17 +126,14 @@ const AppLayout = ({ children }) => {
 
       {/* Navbar mobile */}
       <nav className="md:hidden bg-[#0F1F3D] px-4 py-2 flex justify-between items-center z-10">
-        <<img src="/sentra-logo.png" alt="SENTRA" className="h-20 w-auto brightness-0 invert" />
+        <img src="/sentra-logo.png" alt="SENTRA" className="h-14 w-auto brightness-0 invert" />
         <span className="text-xs text-gray-400">{user?.email}</span>
       </nav>
 
       <div className="flex flex-1">
-        {/* Sidebar solo desktop */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
-
-        {/* Contenido */}
         <main className="flex-1 p-4 md:p-6 bg-gray-50 pb-24 md:pb-6">
           {children}
         </main>

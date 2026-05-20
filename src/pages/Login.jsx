@@ -24,22 +24,16 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="h-screen bg-gray-50 flex items-center justify-center overflow-hidden px-4">
       <div className="bg-white p-8 rounded-xl shadow-sm w-full max-w-md">
-        <div className="mb-8 text-center">
-          <img
-            src="/sentra-logo.png"
-            alt="SENTRA"
-            className="h-50 mx-auto mb-3"
-          />
-          <p className="text-gray-500 mt-1">Gestión inteligente del negocio</p>
+        <div className="mb-6 text-center">
+          <img src="/sentra-logo.png" alt="SENTRA" className="h-24 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Gestión inteligente del negocio</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
@@ -51,9 +45,7 @@ const Login = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
             <input
               type="password"
               value={password}
@@ -64,14 +56,12 @@ const Login = () => {
             />
           </div>
 
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#00C896] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#00b386] transition-colors disabled:opacity-50"
+            className="w-full bg-[#00C896] text-white rounded-lg py-3 text-sm font-medium hover:bg-[#00b386] transition-colors disabled:opacity-50"
           >
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
