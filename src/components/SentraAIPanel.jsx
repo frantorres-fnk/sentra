@@ -45,17 +45,9 @@ const SentraAIPanel = ({ onClose }) => {
 
     try {
       const contexto = await consultarDatos(pregunta)
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1000,
+
+      const { data, error } = await supabase.functions.invoke('sentra-ai', {
+        body: {
           system: `Sos SENTRA AI, el asistente inteligente de Eléctrica Urbano.
 Respondés en español rioplatense, de forma clara, directa y amigable.
 Tenés acceso a los datos reales del negocio.
@@ -68,14 +60,17 @@ Siempre que puedas, terminá con una sugerencia o acción concreta.
 DATOS ACTUALES DEL SISTEMA:
 ${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
           messages: [{ role: 'user', content: pregunta }],
-        }),
+        },
       })
-      const data = await response.json()
-      const respuesta = data.content?.[0]?.text || 'No pude procesar la consulta.'
+
+      if (error) throw error
+
+      const respuesta = data?.content?.[0]?.text || 'No pude procesar la consulta.'
       setConversacion([...nuevaConversacion, { rol: 'ai', texto: respuesta }])
     } catch (error) {
       setConversacion([...nuevaConversacion, { rol: 'ai', texto: '❌ Hubo un error. Intentá de nuevo.' }])
     }
+
     setLoading(false)
   }
 
@@ -93,10 +88,8 @@ ${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
 
   return (
     <>
-      {/* Overlay */}
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
-      {/* Panel — desde abajo en mobile, desde la derecha en desktop */}
       <div className="fixed z-50
         bottom-0 left-0 right-0 h-[90vh] rounded-t-2xl
         md:bottom-0 md:right-0 md:left-auto md:top-0 md:w-96 md:h-screen md:rounded-none
