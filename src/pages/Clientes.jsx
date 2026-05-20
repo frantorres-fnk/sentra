@@ -46,28 +46,30 @@ const Clientes = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-[#0F1F3D]">Clientes</h2>
-          <p className="text-gray-500 mt-1">
+          <h2 className="text-xl md:text-2xl font-bold text-[#0F1F3D]">Clientes</h2>
+          <p className="text-gray-500 text-sm mt-0.5">
             {clientes.length} clientes · Gestioná tu cartera
           </p>
         </div>
         <button
           onClick={() => setModalAbierto(true)}
-          className="bg-[#00C896] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00b386] transition-colors"
+          className="bg-[#00C896] text-white px-3 py-2 md:px-4 rounded-lg text-sm font-medium hover:bg-[#00b386] transition-colors"
         >
-          + Nuevo cliente
+          + Nuevo
         </button>
       </div>
 
+      {/* Buscador */}
       <div className="mb-4 relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
         <input
           type="text"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre, fantasía, CUIT, nro, zona, email, teléfono..."
+          placeholder="Buscar por nombre, CUIT, nro, zona..."
           className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C896]"
         />
         {busqueda && (
@@ -86,77 +88,114 @@ const Clientes = () => {
         </p>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">Nro</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">CUIT</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Condición AFIP</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Saldo CC</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Zona</th>
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
-                  Cargando...
-                </td>
-              </tr>
-            ) : clientesFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
-                  {busqueda ? `No se encontraron clientes para "${busqueda}".` : 'No hay clientes todavía. Agregá el primero.'}
-                </td>
-              </tr>
-            ) : (
-              clientesFiltrados.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => setClienteSeleccionado(c)}
-                  className={`border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${c.bloqueado ? 'bg-red-50/30' : ''}`}
-                >
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs font-mono text-gray-400">#{c.numero_cliente}</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <p className="text-sm font-medium text-[#0F1F3D]">{c.razon_social}</p>
+      {loading ? (
+        <div className="text-center py-12 text-gray-400 text-sm">Cargando...</div>
+      ) : clientesFiltrados.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">
+          {busqueda ? `No se encontraron clientes para "${busqueda}".` : 'No hay clientes todavía. Agregá el primero.'}
+        </div>
+      ) : (
+        <>
+          {/* MOBILE — tarjetas */}
+          <div className="md:hidden space-y-3">
+            {clientesFiltrados.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => setClienteSeleccionado(c)}
+                className={`bg-white rounded-xl border p-4 shadow-sm active:bg-gray-50 cursor-pointer ${c.bloqueado ? 'border-red-200 bg-red-50/20' : 'border-gray-100'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-mono text-gray-400">#{c.numero_cliente}</span>
+                      {c.bloqueado && <span className="text-xs">🔒</span>}
+                    </div>
+                    <p className="text-sm font-semibold text-[#0F1F3D] truncate">{c.razon_social}</p>
                     {c.nombre_fantasia && (
                       <p className="text-xs text-[#00C896] font-medium">{c.nombre_fantasia}</p>
                     )}
-                    {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-600">{c.cuit || '-'}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
-                      {condicionLabel[c.condicion_afip] || c.condicion_afip}
+                    {c.email && <p className="text-xs text-gray-400 truncate">{c.email}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 ml-2 shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.activo ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                      {c.activo ? 'Activo' : 'Inactivo'}
                     </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-600">
-                    ${Number(c.saldo_cc || 0).toLocaleString('es-AR')}
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-600">{c.zona || '-'}</td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-xs px-2 py-1 rounded-full w-fit ${c.activo ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                        {c.activo ? 'Activo' : 'Inactivo'}
+                    {c.saldo_cc > 0 && (
+                      <span className="text-xs font-semibold text-orange-500">
+                        ${Number(c.saldo_cc).toLocaleString('es-AR')}
                       </span>
-                      {c.bloqueado && (
-                        <span className="text-xs px-2 py-1 rounded-full w-fit bg-red-100 text-red-600 font-semibold">
-                          🔒 Bloqueado
-                        </span>
-                      )}
-                    </div>
-                  </td>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-2 pt-2 border-t border-gray-50">
+                  {c.cuit && <span className="text-xs text-gray-500">{c.cuit}</span>}
+                  {c.zona && <span className="text-xs text-gray-400">📍 {c.zona}</span>}
+                  {c.telefono && <span className="text-xs text-gray-400">📞 {c.telefono}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP — tabla */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">Nro</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">CUIT</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Condición AFIP</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Saldo CC</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Zona</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {clientesFiltrados.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => setClienteSeleccionado(c)}
+                    className={`border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${c.bloqueado ? 'bg-red-50/30' : ''}`}
+                  >
+                    <td className="px-5 py-3.5">
+                      <span className="text-xs font-mono text-gray-400">#{c.numero_cliente}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <p className="text-sm font-medium text-[#0F1F3D]">{c.razon_social}</p>
+                      {c.nombre_fantasia && (
+                        <p className="text-xs text-[#00C896] font-medium">{c.nombre_fantasia}</p>
+                      )}
+                      {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-gray-600">{c.cuit || '-'}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
+                        {condicionLabel[c.condicion_afip] || c.condicion_afip}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-gray-600">
+                      ${Number(c.saldo_cc || 0).toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-gray-600">{c.zona || '-'}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-col gap-1">
+                        <span className={`text-xs px-2 py-1 rounded-full w-fit ${c.activo ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                          {c.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                        {c.bloqueado && (
+                          <span className="text-xs px-2 py-1 rounded-full w-fit bg-red-100 text-red-600 font-semibold">
+                            🔒 Bloqueado
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {modalAbierto && (
         <ClienteModal
