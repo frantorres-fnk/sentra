@@ -132,7 +132,7 @@ const AppLayout = ({ children }) => {
 
       {/* Navbar mobile */}
       <nav className="md:hidden bg-[#0F1F3D] px-4 py-2 flex justify-between items-center z-10">
-        <<img src="/sentra-logo.png" alt="SENTRA" className="h-14 w-auto brightness-0 invert" />
+        <<img src="/sentra-logo.png" alt="SENTRA" className="h-20 w-auto brightness-0 invert" />
         <span className="text-xs text-gray-400">{user?.email}</span>
       </nav>
 
