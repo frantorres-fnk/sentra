@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ClienteModal = ({ onClose, onGuardado }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [vendedores, setVendedores] = useState([])
   const [form, setForm] = useState({
     razon_social: '',
     nombre_fantasia: '',
@@ -15,11 +16,54 @@ const ClienteModal = ({ onClose, onGuardado }) => {
     provincia: '',
     codigo_postal: '',
     zona: '',
+    vendedor_id: '',
+    lista_precio: 1,
+    descuento_cascada: '',
   })
+
+  const [escalones, setEscalones] = useState(['', '', '', ''])
+
+  useEffect(() => {
+    const fetchVendedores = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('empresa_id')
+        .eq('auth_user_id', user.id)
+        .single()
+      if (!usuarioData) return
+      const { data } = await supabase
+        .from('usuarios')
+        .select('id, nombre')
+        .eq('empresa_id', usuarioData.empresa_id)
+        .eq('activo', true)
+      setVendedores(data || [])
+    }
+    fetchVendedores()
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
+
+  const handleEscalonChange = (index, value) => {
+    const nuevos = [...escalones]
+    nuevos[index] = value
+    setEscalones(nuevos)
+    setForm({ ...form, descuento_cascada: nuevos.filter(e => parseFloat(e) > 0).join('+') })
+  }
+
+  const calcularDescuentoReal = (escalones) => {
+    let precio = 100
+    escalones.forEach(e => {
+      const val = parseFloat(e)
+      if (!isNaN(val) && val > 0) precio = precio * (1 - val / 100)
+    })
+    return (100 - precio).toFixed(2)
+  }
+
+  const tieneDescuento = escalones.some(e => parseFloat(e) > 0)
+  const descuentoReal = calcularDescuentoReal(escalones)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,7 +85,11 @@ const ClienteModal = ({ onClose, onGuardado }) => {
 
     const { error } = await supabase
       .from('clientes')
-      .insert([{ ...form, empresa_id: usuarioData.empresa_id }])
+      .insert([{
+        ...form,
+        empresa_id: usuarioData.empresa_id,
+        vendedor_id: form.vendedor_id || null,
+      }])
 
     if (error) {
       setError('Error al guardar el cliente. Intentá de nuevo.')
@@ -56,8 +104,8 @@ const ClienteModal = ({ onClose, onGuardado }) => {
   const labelClass = "block text-sm font-medium text-gray-700 mb-1"
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-t-2xl md:rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-lg font-bold text-[#0F1F3D]">Nuevo cliente</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
@@ -147,6 +195,78 @@ const ClienteModal = ({ onClose, onGuardado }) => {
           <div>
             <label className={labelClass}>Zona de reparto</label>
             <input name="zona" value={form.zona} onChange={handleChange} placeholder="Ej: Norte, Centro, Sur, Haedo" className={inputClass} />
+          </div>
+
+          {/* Vendedor asignado */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Asignación comercial</p>
+            <label className={labelClass}>Vendedor asignado *</label>
+            <select name="vendedor_id" value={form.vendedor_id} onChange={handleChange} className={inputClass} required>
+              <option value="">Seleccioná un vendedor</option>
+              {vendedores.map(v => (
+                <option key={v.id} value={v.id}>{v.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Condiciones comerciales */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
+
+            <div className="mb-4">
+              <label className={labelClass}>Lista de precios</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => setForm({ ...form, lista_precio: 1 })}
+                  className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+                    form.lista_precio === 1 ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500'
+                  }`}>
+                  📋 Lista 1
+                  <p className="text-xs font-normal mt-0.5">Mostrador</p>
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, lista_precio: 2 })}
+                  className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+                    form.lista_precio === 2 ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-500'
+                  }`}>
+                  🏷️ Lista 2
+                  <p className="text-xs font-normal mt-0.5">Mayorista</p>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Descuentos en cascada</label>
+              <p className="text-xs text-gray-400 mb-2">Ingresá hasta 4 escalones de descuento</p>
+              <div className="flex gap-2 items-center">
+                {escalones.map((e, i) => (
+                  <div key={i} className="flex items-center gap-1 flex-1">
+                    <input
+                      type="number"
+                      value={e}
+                      onChange={(ev) => handleEscalonChange(i, ev.target.value)}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#00C896]"
+                    />
+                    {i < 3 && <span className="text-gray-400 text-sm shrink-0">+</span>}
+                  </div>
+                ))}
+                <span className="text-gray-400 text-sm shrink-0">%</span>
+              </div>
+              {tieneDescuento && (
+                <div className="mt-3 bg-orange-50 rounded-xl p-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs font-semibold text-orange-600">Descuento real aplicado</p>
+                      <p className="text-xs text-orange-400 font-mono">
+                        {escalones.filter(e => parseFloat(e) > 0).map(e => e + '%').join(' → ')}
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold text-orange-700">{descuentoReal}%</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-sm">{error}</p>}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
@@ -7,6 +7,15 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
   const [error, setError] = useState(null)
   const [confirmarBloqueo, setConfirmarBloqueo] = useState(false)
   const [motivoTemp, setMotivoTemp] = useState('')
+  const [vendedores, setVendedores] = useState([])
+
+  const [escalones, setEscalones] = useState(() => {
+    if (cliente.descuento_cascada) {
+      const partes = cliente.descuento_cascada.split('+')
+      return [...partes, '', '', '', ''].slice(0, 4)
+    }
+    return ['', '', '', '']
+  })
 
   const [form, setForm] = useState({
     razon_social: cliente.razon_social || '',
@@ -24,24 +33,33 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     motivo_bloqueo: cliente.motivo_bloqueo || '',
     lista_precio: cliente.lista_precio || 1,
     descuento_cascada: cliente.descuento_cascada || '',
+    vendedor_id: cliente.vendedor_id || '',
   })
 
-  // Descuentos en cascada
-  const [escalones, setEscalones] = useState(() => {
-    if (cliente.descuento_cascada) {
-      const partes = cliente.descuento_cascada.split('+')
-      return [...partes, '', '', '', ''].slice(0, 4)
+  useEffect(() => {
+    const fetchVendedores = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('empresa_id')
+        .eq('auth_user_id', user.id)
+        .single()
+      if (!usuarioData) return
+      const { data } = await supabase
+        .from('usuarios')
+        .select('id, nombre')
+        .eq('empresa_id', usuarioData.empresa_id)
+        .eq('activo', true)
+      setVendedores(data || [])
     }
-    return ['', '', '', '']
-  })
+    fetchVendedores()
+  }, [])
 
   const calcularDescuentoReal = (escalones) => {
     let precio = 100
     escalones.forEach(e => {
       const val = parseFloat(e)
-      if (!isNaN(val) && val > 0) {
-        precio = precio * (1 - val / 100)
-      }
+      if (!isNaN(val) && val > 0) precio = precio * (1 - val / 100)
     })
     return (100 - precio).toFixed(2)
   }
@@ -69,6 +87,7 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     const { error } = await supabase.from('clientes').update({
       ...form,
       descuento_cascada: cascadaString,
+      vendedor_id: form.vendedor_id || null,
     }).eq('id', cliente.id)
     if (error) {
       setError('Error al actualizar el cliente.')
@@ -81,16 +100,14 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
   }
 
   const handleBloquear = async () => {
-    const { error } = await supabase
-      .from('clientes')
+    const { error } = await supabase.from('clientes')
       .update({ bloqueado: true, motivo_bloqueo: motivoTemp || 'Moroso' })
       .eq('id', cliente.id)
     if (!error) { setConfirmarBloqueo(false); onActualizado() }
   }
 
   const handleDesbloquear = async () => {
-    const { error } = await supabase
-      .from('clientes')
+    const { error } = await supabase.from('clientes')
       .update({ bloqueado: false, motivo_bloqueo: '' })
       .eq('id', cliente.id)
     if (!error) onActualizado()
@@ -125,9 +142,9 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     </div>
   )
 
-  // Descuento cascada display
   const cascadaActual = cliente.descuento_cascada
   const descuentoActual = cascadaActual ? calcularDescuentoReal(cascadaActual.split('+')) : null
+  const vendedorNombre = vendedores.find(v => v.id === cliente.vendedor_id)?.nombre
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
@@ -153,6 +170,9 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
             </h3>
             {cliente.nombre_fantasia && !editando && (
               <p className="text-sm text-[#00C896] font-medium">{cliente.nombre_fantasia}</p>
+            )}
+            {vendedorNombre && !editando && (
+              <p className="text-xs text-gray-400 mt-0.5">👤 {vendedorNombre}</p>
             )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
@@ -202,7 +222,17 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </div>
             </div>
 
-            {/* Precios y descuentos */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Asignación comercial</p>
+              <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                <span className="text-2xl">👤</span>
+                <div>
+                  <p className="text-sm font-semibold text-[#0F1F3D]">{vendedorNombre || 'Sin vendedor asignado'}</p>
+                  <p className="text-xs text-gray-400">Vendedor responsable</p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
               <div className="space-y-2">
@@ -219,7 +249,6 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
                     Lista {cliente.lista_precio || 1}
                   </span>
                 </div>
-
                 {cascadaActual ? (
                   <div className="bg-orange-50 rounded-xl p-3">
                     <div className="flex justify-between items-center">
@@ -248,7 +277,6 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </div>
             </div>
 
-            {/* Bloqueo */}
             {cliente.bloqueado ? (
               <div className="bg-red-50 border border-red-100 rounded-lg p-4">
                 <div className="flex justify-between items-start">
@@ -386,34 +414,39 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               <input name="zona" value={form.zona} onChange={handleChange} placeholder="Ej: Norte, Centro, Sur, Haedo" className={inputClass} />
             </div>
 
+            {/* Vendedor */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Asignación comercial</p>
+              <label className={labelClass}>Vendedor asignado *</label>
+              <select name="vendedor_id" value={form.vendedor_id} onChange={handleChange} className={inputClass} required>
+                <option value="">Seleccioná un vendedor</option>
+                {vendedores.map(v => (
+                  <option key={v.id} value={v.id}>{v.nombre}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Condiciones comerciales */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
-
               <div className="mb-4">
                 <label className={labelClass}>Lista de precios</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, lista_precio: 1 })}
+                  <button type="button" onClick={() => setForm({ ...form, lista_precio: 1 })}
                     className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
                       form.lista_precio === 1 || form.lista_precio === '1'
                         ? 'border-blue-400 bg-blue-50 text-blue-700'
                         : 'border-gray-200 bg-white text-gray-500'
-                    }`}
-                  >
+                    }`}>
                     📋 Lista 1
                     <p className="text-xs font-normal mt-0.5">Mostrador</p>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, lista_precio: 2 })}
+                  <button type="button" onClick={() => setForm({ ...form, lista_precio: 2 })}
                     className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
                       form.lista_precio === 2 || form.lista_precio === '2'
                         ? 'border-green-400 bg-green-50 text-green-700'
                         : 'border-gray-200 bg-white text-gray-500'
-                    }`}
-                  >
+                    }`}>
                     🏷️ Lista 2
                     <p className="text-xs font-normal mt-0.5">Mayorista</p>
                   </button>
@@ -440,7 +473,6 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
                   ))}
                   <span className="text-gray-400 text-sm shrink-0">%</span>
                 </div>
-
                 {tieneDescuento && (
                   <div className="mt-3 bg-orange-50 rounded-xl p-3">
                     <div className="flex justify-between items-center">
