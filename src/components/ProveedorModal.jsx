@@ -13,6 +13,10 @@ const ProveedorModal = ({ onClose, onGuardado }) => {
     telefono: '',
     direccion: '',
     descuento_cascada: '',
+    plazo_pago: 30,
+    contacto_nombre: '',
+    banco: '',
+    cbu: '',
   })
 
   const handleChange = (e) => {
@@ -81,45 +85,87 @@ const ProveedorModal = ({ onClose, onGuardado }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Datos fiscales */}
           <div>
-            <label className={labelClass}>Razón social *</label>
-            <input name="razon_social" value={form.razon_social} onChange={handleChange} className={inputClass} required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>CUIT</label>
-              <input name="cuit" value={form.cuit} onChange={handleChange} placeholder="30-12345678-9" className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Condición AFIP</label>
-              <select name="condicion_afip" value={form.condicion_afip} onChange={handleChange} className={inputClass}>
-                <option value="responsable_inscripto">Responsable Inscripto</option>
-                <option value="monotributista">Monotributista</option>
-                <option value="exento">Exento</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Email</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange} className={inputClass} />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Datos fiscales</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelClass}>Razón social *</label>
+                <input name="razon_social" value={form.razon_social} onChange={handleChange} className={inputClass} required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>CUIT</label>
+                  <input name="cuit" value={form.cuit} onChange={handleChange} placeholder="30-12345678-9" className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Condición AFIP</label>
+                  <select name="condicion_afip" value={form.condicion_afip} onChange={handleChange} className={inputClass}>
+                    <option value="responsable_inscripto">Responsable Inscripto</option>
+                    <option value="monotributista">Monotributista</option>
+                    <option value="exento">Exento</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Contacto */}
           <div>
-            <label className={labelClass}>Dirección</label>
-            <input name="direccion" value={form.direccion} onChange={handleChange} className={inputClass} />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Contacto</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelClass}>Nombre del contacto comercial</label>
+                <input name="contacto_nombre" value={form.contacto_nombre} onChange={handleChange} placeholder="Ej: Juan García" className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Email</label>
+                  <input name="email" type="email" value={form.email} onChange={handleChange} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Teléfono</label>
+                  <input name="telefono" value={form.telefono} onChange={handleChange} className={inputClass} />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Dirección</label>
+                <input name="direccion" value={form.direccion} onChange={handleChange} className={inputClass} />
+              </div>
+            </div>
+          </div>
+
+          {/* Datos de pago */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Datos de pago</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelClass}>Plazo de pago</label>
+                <select name="plazo_pago" value={form.plazo_pago} onChange={handleChange} className={inputClass}>
+                  <option value={0}>Contado</option>
+                  <option value={7}>7 días</option>
+                  <option value={15}>15 días</option>
+                  <option value={30}>30 días</option>
+                  <option value={45}>45 días</option>
+                  <option value={60}>60 días</option>
+                  <option value={90}>90 días</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Banco</label>
+                <input name="banco" value={form.banco} onChange={handleChange} placeholder="Ej: Banco Galicia" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>CBU</label>
+                <input name="cbu" value={form.cbu} onChange={handleChange} placeholder="22 dígitos" className={inputClass} />
+              </div>
+            </div>
           </div>
 
           {/* Descuentos en cascada */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones de compra</p>
             <label className={labelClass}>Descuentos de compra en cascada</label>
             <p className="text-xs text-gray-400 mb-2">Descuentos que este proveedor nos otorga</p>
             <div className="flex gap-2 items-center">
