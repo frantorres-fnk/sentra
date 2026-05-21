@@ -18,6 +18,7 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
     precio_costo: producto.precio_costo || 0,
     clasificacion: producto.clasificacion || 'B',
     activo: producto.activo ?? true,
+    alicuota_iva: producto.alicuota_iva ?? 21,
   })
 
   const handleChange = (e) => {
@@ -36,6 +37,7 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
         precio_venta: Number(form.precio_venta),
         precio_lista_2: Number(form.precio_lista_2),
         precio_costo: Number(form.precio_costo),
+        alicuota_iva: Number(form.alicuota_iva),
       })
       .eq('id', producto.id)
 
@@ -57,6 +59,20 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
     ? (((producto.precio_venta - producto.precio_costo) / producto.precio_venta) * 100).toFixed(1)
     : null
 
+  const ivaColor = {
+    21: { bg: 'bg-red-50', text: 'text-red-600', label: 'General' },
+    10.5: { bg: 'bg-yellow-50', text: 'text-yellow-600', label: 'Reducido' },
+    0: { bg: 'bg-gray-50', text: 'text-gray-500', label: 'Exento' },
+  }
+
+  const ivaActual = ivaColor[Number(producto.alicuota_iva)] || ivaColor[21]
+
+  const ivaColorEdit = {
+    21: 'bg-red-50 border-red-200 text-red-700',
+    10.5: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+    0: 'bg-gray-50 border-gray-200 text-gray-600',
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-t-2xl md:rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
@@ -70,7 +86,6 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
         {!editando ? (
           <div className="space-y-5">
 
-            {/* Info general */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Información</p>
               <div className="grid grid-cols-2 gap-4">
@@ -96,6 +111,22 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
                     {producto.clasificacion || '-'}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* IVA */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Alícuota IVA</p>
+              <div className={`rounded-xl p-3 flex justify-between items-center ${ivaActual.bg}`}>
+                <div>
+                  <p className={`text-xs font-semibold ${ivaActual.text}`}>IVA {ivaActual.label}</p>
+                  <p className={`text-xs ${ivaActual.text} opacity-70`}>
+                    {Number(producto.alicuota_iva) === 21 ? 'Productos generales' :
+                     Number(producto.alicuota_iva) === 10.5 ? 'Luminarias y materiales eléctricos' :
+                     'Sin IVA'}
+                  </p>
+                </div>
+                <p className={`text-2xl font-bold ${ivaActual.text}`}>{producto.alicuota_iva}%</p>
               </div>
             </div>
 
@@ -177,21 +208,48 @@ const ProductoDetalle = ({ producto, onClose, onActualizado }) => {
               <input name="descripcion" value={form.descripcion} onChange={handleChange} className={inputClass} />
             </div>
 
+            {/* IVA */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Alícuota IVA</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[21, 10.5, 0].map(iva => (
+                  <button
+                    key={iva}
+                    type="button"
+                    onClick={() => setForm({ ...form, alicuota_iva: iva })}
+                    className={`p-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                      Number(form.alicuota_iva) === iva
+                        ? ivaColorEdit[iva]
+                        : 'border-gray-200 bg-white text-gray-400'
+                    }`}
+                  >
+                    {iva}%
+                    <p className="text-xs font-normal mt-0.5">
+                      {iva === 21 ? 'General' : iva === 10.5 ? 'Reducido' : 'Exento'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Precios */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Precios</p>
               <div className="grid grid-cols-1 gap-3">
                 <div className="bg-blue-50 rounded-xl p-3">
                   <label className="block text-sm font-semibold text-blue-700 mb-1">Lista 1 — Mostrador</label>
-                  <input name="precio_venta" type="number" value={form.precio_venta} onChange={handleChange} className="w-full border border-blue-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
+                  <input name="precio_venta" type="number" value={form.precio_venta} onChange={handleChange}
+                    className="w-full border border-blue-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                 </div>
                 <div className="bg-green-50 rounded-xl p-3">
                   <label className="block text-sm font-semibold text-green-700 mb-1">Lista 2 — Mayorista</label>
-                  <input name="precio_lista_2" type="number" value={form.precio_lista_2} onChange={handleChange} className="w-full border border-green-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white" />
+                  <input name="precio_lista_2" type="number" value={form.precio_lista_2} onChange={handleChange}
+                    className="w-full border border-green-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white" />
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <label className="block text-sm font-semibold text-gray-600 mb-1">Precio costo (interno)</label>
-                  <input name="precio_costo" type="number" value={form.precio_costo} onChange={handleChange} className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white" />
+                  <input name="precio_costo" type="number" value={form.precio_costo} onChange={handleChange}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white" />
                 </div>
               </div>
             </div>
