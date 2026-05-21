@@ -22,18 +22,54 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     activo: cliente.activo ?? true,
     bloqueado: cliente.bloqueado ?? false,
     motivo_bloqueo: cliente.motivo_bloqueo || '',
+    lista_precio: cliente.lista_precio || 1,
+    descuento_cascada: cliente.descuento_cascada || '',
   })
+
+  // Descuentos en cascada
+  const [escalones, setEscalones] = useState(() => {
+    if (cliente.descuento_cascada) {
+      const partes = cliente.descuento_cascada.split('+')
+      return [...partes, '', '', '', ''].slice(0, 4)
+    }
+    return ['', '', '', '']
+  })
+
+  const calcularDescuentoReal = (escalones) => {
+    let precio = 100
+    escalones.forEach(e => {
+      const val = parseFloat(e)
+      if (!isNaN(val) && val > 0) {
+        precio = precio * (1 - val / 100)
+      }
+    })
+    return (100 - precio).toFixed(2)
+  }
+
+  const descuentoReal = calcularDescuentoReal(escalones)
+  const tieneDescuento = escalones.some(e => parseFloat(e) > 0)
+  const cascadaString = escalones.filter(e => parseFloat(e) > 0).join('+')
 
   const handleChange = (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm({ ...form, [e.target.name]: val })
   }
 
+  const handleEscalonChange = (index, value) => {
+    const nuevos = [...escalones]
+    nuevos[index] = value
+    setEscalones(nuevos)
+    setForm({ ...form, descuento_cascada: nuevos.filter(e => parseFloat(e) > 0).join('+') })
+  }
+
   const handleGuardar = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.from('clientes').update(form).eq('id', cliente.id)
+    const { error } = await supabase.from('clientes').update({
+      ...form,
+      descuento_cascada: cascadaString,
+    }).eq('id', cliente.id)
     if (error) {
       setError('Error al actualizar el cliente.')
       setLoading(false)
@@ -49,10 +85,7 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
       .from('clientes')
       .update({ bloqueado: true, motivo_bloqueo: motivoTemp || 'Moroso' })
       .eq('id', cliente.id)
-    if (!error) {
-      setConfirmarBloqueo(false)
-      onActualizado()
-    }
+    if (!error) { setConfirmarBloqueo(false); onActualizado() }
   }
 
   const handleDesbloquear = async () => {
@@ -92,9 +125,13 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     </div>
   )
 
+  // Descuento cascada display
+  const cascadaActual = cliente.descuento_cascada
+  const descuentoActual = cascadaActual ? calcularDescuentoReal(cascadaActual.split('+')) : null
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-t-2xl md:rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
 
         <div className="flex justify-between items-center mb-2">
           <div>
@@ -123,20 +160,12 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
 
         {!editando && (
           <div className="flex gap-2 mb-5 mt-3">
-            <button
-              onClick={handleEmail}
-              disabled={!cliente.email}
-              title={cliente.email || 'Sin email cargado'}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+            <button onClick={handleEmail} disabled={!cliente.email}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               ✉️ Email
             </button>
-            <button
-              onClick={handleWhatsApp}
-              disabled={!cliente.telefono}
-              title={cliente.telefono || 'Sin teléfono cargado'}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+            <button onClick={handleWhatsApp} disabled={!cliente.telefono}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               💬 WhatsApp
             </button>
           </div>
@@ -173,6 +202,45 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </div>
             </div>
 
+            {/* Precios y descuentos */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
+              <div className="space-y-2">
+                <div className={`rounded-xl p-3 flex justify-between items-center ${cliente.lista_precio === 2 ? 'bg-green-50' : 'bg-blue-50'}`}>
+                  <div>
+                    <p className={`text-xs font-semibold ${cliente.lista_precio === 2 ? 'text-green-600' : 'text-blue-600'}`}>
+                      Lista {cliente.lista_precio || 1}
+                    </p>
+                    <p className={`text-xs ${cliente.lista_precio === 2 ? 'text-green-400' : 'text-blue-400'}`}>
+                      {cliente.lista_precio === 2 ? 'Precios mayoristas' : 'Precios mostrador'}
+                    </p>
+                  </div>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${cliente.lista_precio === 2 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                    Lista {cliente.lista_precio || 1}
+                  </span>
+                </div>
+
+                {cascadaActual ? (
+                  <div className="bg-orange-50 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-semibold text-orange-600">Descuento en cascada</p>
+                        <p className="text-xs text-orange-400 font-mono">{cascadaActual.replace(/\+/g, ' + ')}%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-orange-700">{descuentoActual}%</p>
+                        <p className="text-xs text-orange-400">descuento real</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400">Sin descuento especial — precio de lista</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Cuenta corriente</p>
               <div className="grid grid-cols-2 gap-4">
@@ -188,10 +256,7 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
                     <p className="text-sm font-semibold text-red-600">🔒 Cuenta bloqueada</p>
                     <p className="text-xs text-red-400 mt-0.5">Motivo: {cliente.motivo_bloqueo || 'Sin especificar'}</p>
                   </div>
-                  <button
-                    onClick={handleDesbloquear}
-                    className="text-xs text-red-500 hover:text-red-700 underline"
-                  >
+                  <button onClick={handleDesbloquear} className="text-xs text-red-500 hover:text-red-700 underline">
                     Desbloquear
                   </button>
                 </div>
@@ -199,32 +264,23 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
             ) : (
               <div>
                 {!confirmarBloqueo ? (
-                  <button
-                    onClick={() => setConfirmarBloqueo(true)}
-                    className="w-full text-xs text-red-400 hover:text-red-600 py-2 border border-dashed border-red-200 rounded-lg hover:border-red-400 transition-colors"
-                  >
+                  <button onClick={() => setConfirmarBloqueo(true)}
+                    className="w-full text-xs text-red-400 hover:text-red-600 py-2 border border-dashed border-red-200 rounded-lg hover:border-red-400 transition-colors">
                     🔒 Bloquear cuenta por moroso
                   </button>
                 ) : (
                   <div className="bg-red-50 border border-red-100 rounded-lg p-4 space-y-3">
                     <p className="text-sm font-semibold text-red-600">¿Bloquear esta cuenta?</p>
-                    <input
-                      value={motivoTemp}
-                      onChange={(e) => setMotivoTemp(e.target.value)}
+                    <input value={motivoTemp} onChange={(e) => setMotivoTemp(e.target.value)}
                       placeholder="Motivo (ej: Moroso, Cheque rechazado...)"
-                      className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                    />
+                      className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300" />
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => setConfirmarBloqueo(false)}
-                        className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2 text-xs hover:bg-gray-50 transition-colors"
-                      >
+                      <button onClick={() => setConfirmarBloqueo(false)}
+                        className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2 text-xs hover:bg-gray-50 transition-colors">
                         Cancelar
                       </button>
-                      <button
-                        onClick={handleBloquear}
-                        className="flex-1 bg-red-500 text-white rounded-lg py-2 text-xs font-medium hover:bg-red-600 transition-colors"
-                      >
+                      <button onClick={handleBloquear}
+                        className="flex-1 bg-red-500 text-white rounded-lg py-2 text-xs font-medium hover:bg-red-600 transition-colors">
                         Confirmar bloqueo
                       </button>
                     </div>
@@ -328,6 +384,77 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
             <div>
               <label className={labelClass}>Zona de reparto</label>
               <input name="zona" value={form.zona} onChange={handleChange} placeholder="Ej: Norte, Centro, Sur, Haedo" className={inputClass} />
+            </div>
+
+            {/* Condiciones comerciales */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
+
+              <div className="mb-4">
+                <label className={labelClass}>Lista de precios</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, lista_precio: 1 })}
+                    className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+                      form.lista_precio === 1 || form.lista_precio === '1'
+                        ? 'border-blue-400 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-500'
+                    }`}
+                  >
+                    📋 Lista 1
+                    <p className="text-xs font-normal mt-0.5">Mostrador</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, lista_precio: 2 })}
+                    className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+                      form.lista_precio === 2 || form.lista_precio === '2'
+                        ? 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-500'
+                    }`}
+                  >
+                    🏷️ Lista 2
+                    <p className="text-xs font-normal mt-0.5">Mayorista</p>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Descuentos en cascada</label>
+                <p className="text-xs text-gray-400 mb-2">Ingresá hasta 4 escalones de descuento</p>
+                <div className="flex gap-2 items-center">
+                  {escalones.map((e, i) => (
+                    <div key={i} className="flex items-center gap-1 flex-1">
+                      <input
+                        type="number"
+                        value={e}
+                        onChange={(ev) => handleEscalonChange(i, ev.target.value)}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#00C896]"
+                      />
+                      {i < 3 && <span className="text-gray-400 text-sm shrink-0">+</span>}
+                    </div>
+                  ))}
+                  <span className="text-gray-400 text-sm shrink-0">%</span>
+                </div>
+
+                {tieneDescuento && (
+                  <div className="mt-3 bg-orange-50 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-semibold text-orange-600">Descuento real aplicado</p>
+                        <p className="text-xs text-orange-400 font-mono">
+                          {escalones.filter(e => parseFloat(e) > 0).map(e => e + '%').join(' → ')}
+                        </p>
+                      </div>
+                      <p className="text-xl font-bold text-orange-700">{descuentoReal}%</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
