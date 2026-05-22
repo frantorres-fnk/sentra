@@ -14,6 +14,7 @@ import Facturacion from './pages/Facturacion'
 import CajaChica from './pages/CajaChica'
 import SentraAI from './pages/SentraAI'
 import Cotizaciones from './pages/Cotizaciones'
+import Portal from './pages/Portal'
 import AppLayout from './layouts/AppLayout'
 
 const ProtectedRoute = ({ children }) => {
@@ -31,6 +32,7 @@ const App = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/portal" element={<Portal />} />
       <Route path="/" element={<Layout><Dashboard /></Layout>} />
       <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
       <Route path="/productos" element={<Layout><Productos /></Layout>} />
