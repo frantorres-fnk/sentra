@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const estadoConfig = {
   borrador:  { label: 'Borrador',  color: 'bg-gray-100 text-gray-600' },
@@ -30,6 +32,195 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
     fetchDetalles()
   }, [cotizacion.id])
 
+  // ── PDF ──────────────────────────────────────────────────────────────────
+  const handlePDF = () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const PW = 210
+    const ML = 14
+    const MR = 14
+    const CW = PW - ML - MR
+
+    // Header
+    doc.setFillColor(15, 110, 86)
+    doc.rect(0, 0, PW, 22, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text('SENTRA', ML, 13)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.text('powered by Fenikso', ML, 19)
+
+    // Número y estado (derecha del header)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(`COTIZACIÓN #${cotizacion.id.slice(-6).toUpperCase()}`, PW - MR, 11, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.text((estadoConfig[estadoActual]?.label || '').toUpperCase(), PW - MR, 18, { align: 'right' })
+
+    // Datos cliente
+    let y = 32
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(120, 120, 120)
+    doc.text('CLIENTE', ML, y)
+
+    y += 4
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.setTextColor(15, 31, 61)
+    doc.text(cotizacion.clientes?.razon_social || '—', ML, y)
+
+    y += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(90, 90, 90)
+    if (cotizacion.clientes?.nombre_fantasia) { doc.text(cotizacion.clientes.nombre_fantasia, ML, y); y += 4 }
+    if (cotizacion.clientes?.email)           { doc.text(cotizacion.clientes.email, ML, y); y += 4 }
+    if (cotizacion.clientes?.telefono)        { doc.text(`Tel: ${cotizacion.clientes.telefono}`, ML, y); y += 4 }
+
+    // Fechas (columna derecha)
+    const col2 = ML + CW / 2 + 10
+    let y2 = 36
+    const fechaEmision   = new Date(cotizacion.created_at).toLocaleDateString('es-AR')
+    const fechaVencimiento = cotizacion.vencimiento
+      ? new Date(cotizacion.vencimiento).toLocaleDateString('es-AR')
+      : '—'
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(120, 120, 120)
+    doc.text('Fecha de emisión:', col2, y2)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(30, 30, 30)
+    doc.text(fechaEmision, col2 + 32, y2)
+
+    y2 += 5
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(120, 120, 120)
+    doc.text('Válida hasta:', col2, y2)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(new Date(cotizacion.vencimiento) < new Date() ? 180 : 30, 30, 30)
+    doc.text(fechaVencimiento, col2 + 32, y2)
+
+    y2 += 5
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(120, 120, 120)
+    doc.text('Vendedor:', col2, y2)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(30, 30, 30)
+    doc.text(cotizacion.usuarios?.nombre || '—', col2 + 32, y2)
+
+    // Separador
+    y = Math.max(y + 4, y2 + 8)
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.3)
+    doc.line(ML, y, PW - MR, y)
+    y += 6
+
+    // Tabla de productos
+    autoTable(doc, {
+      startY: y,
+      head: [['Código', 'Producto', 'Cant.', 'Precio unit.', 'Dto.', 'Subtotal']],
+      body: detalles.map(d => [
+        d.productos?.codigo || '—',
+        d.productos?.nombre || '—',
+        Number(d.cantidad).toLocaleString('es-AR'),
+        `$${Number(d.precio_unitario).toLocaleString('es-AR')}`,
+        d.descuento > 0 ? `${d.descuento}%` : '—',
+        `$${Number(d.subtotal).toLocaleString('es-AR')}`,
+      ]),
+      theme: 'plain',
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 }, textColor: [30, 30, 30] },
+      headStyles: { fillColor: [15, 110, 86], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      alternateRowStyles: { fillColor: [248, 251, 249] },
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 16, halign: 'right' },
+        3: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 14, halign: 'right' },
+        5: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: ML, right: MR },
+    })
+
+    y = doc.lastAutoTable.finalY + 6
+
+    // Totales
+    const totX = PW - MR - 65
+    const totW = 65
+
+    doc.setFillColor(240, 240, 240)
+    doc.roundedRect(totX, y, totW, Number(cotizacion.descuento) > 0 ? 21 : 14, 2, 2, 'F')
+
+    let yt = y + 6
+    if (Number(cotizacion.descuento) > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(90, 90, 90)
+      doc.text('Subtotal:', totX + 4, yt)
+      doc.text(`$${Number(cotizacion.subtotal).toLocaleString('es-AR')}`, totX + totW - 3, yt, { align: 'right' })
+      yt += 6
+      doc.setTextColor(200, 80, 30)
+      doc.text('Descuento:', totX + 4, yt)
+      doc.text(`-$${Number(cotizacion.descuento).toLocaleString('es-AR')}`, totX + totW - 3, yt, { align: 'right' })
+      yt += 6
+    } else {
+      yt += 1
+    }
+
+    doc.setFillColor(15, 110, 86)
+    doc.rect(totX, yt - 4.5, totW, 8, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9.5)
+    doc.setTextColor(255, 255, 255)
+    doc.text('TOTAL:', totX + 4, yt + 0.5)
+    doc.text(`$${Number(cotizacion.total).toLocaleString('es-AR')}`, totX + totW - 3, yt + 0.5, { align: 'right' })
+
+    y = yt + 12
+
+    // Nota
+    if (cotizacion.nota) {
+      doc.setFillColor(255, 251, 230)
+      const notaLines = doc.splitTextToSize(cotizacion.nota, CW - 8)
+      doc.roundedRect(ML, y, CW, notaLines.length * 4.5 + 10, 2, 2, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7.5)
+      doc.setTextColor(150, 100, 10)
+      doc.text('NOTA', ML + 4, y + 6)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(100, 70, 10)
+      doc.text(notaLines, ML + 4, y + 11)
+      y += notaLines.length * 4.5 + 16
+    }
+
+    // Aviso validez vencida
+    if (new Date(cotizacion.vencimiento) < new Date()) {
+      doc.setFillColor(255, 235, 235)
+      doc.roundedRect(ML, y, CW, 9, 2, 2, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(180, 50, 30)
+      doc.text(`Esta cotización venció el ${new Date(cotizacion.vencimiento).toLocaleDateString('es-AR')}.`, ML + 4, y + 6)
+    }
+
+    // Footer
+    doc.setFillColor(15, 110, 86)
+    doc.rect(0, 285, PW, 12, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(255, 255, 255)
+    doc.text('Sentra ERP — Fenikso', ML, 291)
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-AR')}`, PW - MR, 291, { align: 'right' })
+
+    doc.save(`cotizacion-${cotizacion.id.slice(-6).toUpperCase()}.pdf`)
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   const handleCambiarEstado = async (nuevoEstado) => {
     setLoading(true)
     const { error } = await supabase
@@ -51,7 +242,6 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
       .eq('auth_user_id', user.id)
       .single()
 
-    // Crear pedido desde cotización
     const { data: pedido, error: pedidoError } = await supabase
       .from('pedidos')
       .insert([{
@@ -69,7 +259,6 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
 
     if (pedidoError) { setError('Error al crear el pedido.'); setLoadingPedido(false); return }
 
-    // Copiar detalles al pedido
     const detallesPedido = detalles.map(d => ({
       empresa_id: cotizacion.empresa_id,
       pedido_id: pedido.id,
@@ -82,7 +271,6 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
 
     await supabase.from('pedidos_detalle').insert(detallesPedido)
 
-    // Marcar cotización como aprobada y linkear al pedido
     await supabase
       .from('cotizaciones')
       .update({ estado: 'aprobada', pedido_id: pedido.id })
@@ -147,6 +335,12 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
           >
             💬 WhatsApp
+          </button>
+          <button
+            onClick={handlePDF}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 transition-colors"
+          >
+            📄 PDF
           </button>
         </div>
 
@@ -223,7 +417,6 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
         {/* Acciones según estado */}
         <div className="space-y-2">
 
-          {/* Convertir a pedido — solo si está aprobada o enviada */}
           {(estadoActual === 'aprobada' || estadoActual === 'enviada') && !cotizacion.pedido_id && (
             <button
               onClick={handleConvertirPedido}
@@ -242,7 +435,6 @@ const CotizacionDetalle = ({ cotizacion, onClose, onActualizado }) => {
             </div>
           )}
 
-          {/* Cambiar estado */}
           {estadoActual === 'borrador' && (
             <button
               onClick={() => handleCambiarEstado('enviada')}
