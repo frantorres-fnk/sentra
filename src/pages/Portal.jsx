@@ -87,19 +87,29 @@ const Portal = () => {
   }
 
   const fetchDatosPortal = async (clienteId) => {
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const url = import.meta.env.VITE_SUPABASE_URL
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'apikey': SUPABASE_ANON_KEY,
+      'apikey': anonKey,
+      'Authorization': `Bearer ${anonKey}`,
     }
 
+    console.log('URL:', url)
+    console.log('KEY:', anonKey?.slice(0, 20))
+    console.log('CLIENTE ID:', clienteId)
+
     const [pedidosRes, cotizacionesRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
+      fetch(`${url}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
+      fetch(`${url}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
     ])
 
     const pedidosData = await pedidosRes.json()
     const cotizacionesData = await cotizacionesRes.json()
+
+    console.log('PEDIDOS:', pedidosData)
+    console.log('COTIZACIONES:', cotizacionesData)
 
     setPedidos(Array.isArray(pedidosData) ? pedidosData : [])
     setCotizaciones(Array.isArray(cotizacionesData) ? cotizacionesData : [])
@@ -272,7 +282,6 @@ const Portal = () => {
               </h2>
               <p className="text-sm text-gray-400">Bienvenido a tu portal de cliente</p>
             </div>
-
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
                 <p className="text-2xl font-bold text-[#0F1F3D]">{pedidos.length}</p>
@@ -287,7 +296,6 @@ const Portal = () => {
                 <p className="text-xs text-gray-400 mt-1">En reparto</p>
               </div>
             </div>
-
             {cotsPendientes > 0 && (
               <div
                 onClick={() => setSeccion('cotizaciones')}
