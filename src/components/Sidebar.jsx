@@ -7,6 +7,7 @@ const menu = [
   { label: 'Productos',     path: '/productos',     icon: '📦', permiso: 'ver_stock' },
   { label: 'Stock',         path: '/stock',         icon: '🏭', permiso: 'ver_stock' },
   { label: 'Pedidos',       path: '/pedidos',       icon: '🛒', permiso: 'ver_pedidos' },
+  { label: 'Cotizaciones',  path: '/cotizaciones',  icon: '📋', permiso: 'ver_pedidos' },
   { label: 'Facturación',   path: '/facturacion',   icon: '🧾', permiso: 'ver_facturacion' },
   { label: 'Cobranzas',     path: '/cobranzas',     icon: '💰', permiso: 'ver_caja' },
   { label: 'Proveedores',   path: '/proveedores',   icon: '🏪', permiso: 'ver_proveedores' },
