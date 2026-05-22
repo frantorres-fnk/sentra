@@ -13,6 +13,7 @@ const Portal = () => {
   const [segundos, setSegundos] = useState(60)
   const [pedidos, setPedidos] = useState([])
   const [cotizaciones, setCotizaciones] = useState([])
+  const [saldoCC, setSaldoCC] = useState(0)
   const [seccion, setSeccion] = useState('inicio')
   const inputsRef = useRef([])
 
@@ -87,32 +88,25 @@ const Portal = () => {
   }
 
   const fetchDatosPortal = async (clienteId) => {
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    const url = import.meta.env.VITE_SUPABASE_URL
-
     const headers = {
       'Content-Type': 'application/json',
-      'apikey': anonKey,
-      'Authorization': `Bearer ${anonKey}`,
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     }
 
-    console.log('URL:', url)
-    console.log('KEY:', anonKey?.slice(0, 20))
-    console.log('CLIENTE ID:', clienteId)
-
-    const [pedidosRes, cotizacionesRes] = await Promise.all([
-      fetch(`${url}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
-      fetch(`${url}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
+    const [pedidosRes, cotizacionesRes, clienteRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/clientes?id=eq.${clienteId}&select=saldo_cc`, { headers }),
     ])
 
     const pedidosData = await pedidosRes.json()
     const cotizacionesData = await cotizacionesRes.json()
-
-    console.log('PEDIDOS:', pedidosData)
-    console.log('COTIZACIONES:', cotizacionesData)
+    const clienteData = await clienteRes.json()
 
     setPedidos(Array.isArray(pedidosData) ? pedidosData : [])
     setCotizaciones(Array.isArray(cotizacionesData) ? cotizacionesData : [])
+    setSaldoCC(clienteData?.[0]?.saldo_cc ?? 0)
   }
 
   const estadoPedidoColor = {
@@ -233,7 +227,7 @@ const Portal = () => {
         <div className="flex items-center gap-3">
           <span className="text-white text-sm hidden md:block">{cliente?.razon_social}</span>
           <button
-            onClick={() => { setCliente(null); setPaso('email'); setEmail(''); setPedidos([]); setCotizaciones([]) }}
+            onClick={() => { setCliente(null); setPaso('email'); setEmail(''); setPedidos([]); setCotizaciones([]); setSaldoCC(0) }}
             className="text-xs bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-colors"
           >
             Salir
@@ -296,6 +290,17 @@ const Portal = () => {
                 <p className="text-xs text-gray-400 mt-1">En reparto</p>
               </div>
             </div>
+            {saldoCC > 0 && (
+              <div
+                onClick={() => setSeccion('cuenta')}
+                className="bg-red-50 border border-red-100 rounded-xl p-4 cursor-pointer hover:bg-red-100 transition-colors"
+              >
+                <p className="text-sm font-semibold text-red-700">
+                  💰 Tenés un saldo pendiente de ${Number(saldoCC).toLocaleString('es-AR')}
+                </p>
+                <p className="text-xs text-red-400 mt-0.5">Tocá para ver tu cuenta →</p>
+              </div>
+            )}
             {cotsPendientes > 0 && (
               <div
                 onClick={() => setSeccion('cotizaciones')}
@@ -376,10 +381,12 @@ const Portal = () => {
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Mi cuenta corriente</h3>
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
               <p className="text-xs text-gray-400 mb-1 text-center">Saldo actual</p>
-              <p className="text-3xl font-bold text-center text-[#0F1F3D]">
-                ${Number(0).toLocaleString('es-AR')}
+              <p className={`text-3xl font-bold text-center ${saldoCC > 0 ? 'text-red-500' : 'text-[#00C896]'}`}>
+                ${Number(saldoCC || 0).toLocaleString('es-AR')}
               </p>
-              <p className="text-xs text-gray-400 mt-2 text-center">Contactá a tu vendedor para más detalles</p>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                {saldoCC > 0 ? 'Tenés saldo pendiente de pago' : 'Sin deuda pendiente ✓'}
+              </p>
             </div>
           </div>
         )}
