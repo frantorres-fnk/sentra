@@ -8,6 +8,8 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
   const [confirmarBloqueo, setConfirmarBloqueo] = useState(false)
   const [motivoTemp, setMotivoTemp] = useState('')
   const [vendedores, setVendedores] = useState([])
+  const [loadingPortal, setLoadingPortal] = useState(false)
+  const [portalActivo, setPortalActivo] = useState(cliente.portal_activo ?? false)
 
   const [escalones, setEscalones] = useState(() => {
     if (cliente.descuento_cascada) {
@@ -111,6 +113,18 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
       .update({ bloqueado: false, motivo_bloqueo: '' })
       .eq('id', cliente.id)
     if (!error) onActualizado()
+  }
+
+  const handleTogglePortal = async () => {
+    setLoadingPortal(true)
+    const nuevoEstado = !portalActivo
+    const { error } = await supabase.from('clientes')
+      .update({ portal_activo: nuevoEstado })
+      .eq('id', cliente.id)
+    if (!error) {
+      setPortalActivo(nuevoEstado)
+    }
+    setLoadingPortal(false)
   }
 
   const handleWhatsApp = () => {
@@ -277,6 +291,37 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </div>
             </div>
 
+            {/* PORTAL CLIENTE */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Portal cliente</p>
+              <div className={`rounded-xl p-4 flex justify-between items-center ${portalActivo ? 'bg-[#00C896]/10 border border-[#00C896]/30' : 'bg-gray-50 border border-gray-100'}`}>
+                <div>
+                  <p className={`text-sm font-semibold ${portalActivo ? 'text-[#00C896]' : 'text-gray-500'}`}>
+                    {portalActivo ? '🌐 Portal habilitado' : '🔒 Portal deshabilitado'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {portalActivo
+                      ? `Accede con ${cliente.email}`
+                      : 'El cliente no puede acceder al portal'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleTogglePortal}
+                  disabled={loadingPortal || !cliente.email}
+                  className={`text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    portalActivo
+                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                      : 'bg-[#00C896] text-white hover:bg-[#00b386]'
+                  }`}
+                >
+                  {loadingPortal ? '...' : portalActivo ? 'Deshabilitar' : 'Habilitar'}
+                </button>
+              </div>
+              {!cliente.email && (
+                <p className="text-xs text-orange-400 mt-2">⚠️ El cliente necesita un email para acceder al portal</p>
+              )}
+            </div>
+
             {cliente.bloqueado ? (
               <div className="bg-red-50 border border-red-100 rounded-lg p-4">
                 <div className="flex justify-between items-start">
@@ -414,7 +459,6 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               <input name="zona" value={form.zona} onChange={handleChange} placeholder="Ej: Norte, Centro, Sur, Haedo" className={inputClass} />
             </div>
 
-            {/* Vendedor */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Asignación comercial</p>
               <label className={labelClass}>Vendedor asignado *</label>
@@ -426,7 +470,6 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </select>
             </div>
 
-            {/* Condiciones comerciales */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Condiciones comerciales</p>
               <div className="mb-4">
