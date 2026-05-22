@@ -1,6 +1,84 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+const UpsellBanner = ({ producto, cantidad, onAceptar }) => {
+  if (!producto) return null
+
+  const cant = Number(cantidad) || 0
+  const precioUnit = Number(producto.precio_venta) || 0
+  const cantChica = Number(producto.cantidad_caja_chica) || 0
+  const precioChica = Number(producto.precio_caja_chica) || 0
+  const cantMaster = Number(producto.cantidad_caja_master) || 0
+  const precioMaster = Number(producto.precio_caja_master) || 0
+
+  // Sugerencia master: si la cantidad >= 50% de una caja master
+  if (cantMaster && precioMaster && cant >= cantMaster * 0.5 && cant < cantMaster) {
+    const ahorro = (precioUnit * cantMaster) - precioMaster
+    return (
+      <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mt-2">
+        <p className="text-xs font-semibold text-purple-700 mb-1">🏭 ¿Llevás una caja master?</p>
+        <p className="text-xs text-purple-600">
+          {cantMaster} unidades por ${precioMaster.toLocaleString('es-AR')} — ahorrás ${ahorro.toLocaleString('es-AR')} vs unidades sueltas
+        </p>
+        <button
+          type="button"
+          onClick={() => onAceptar(cantMaster, precioMaster, 'master')}
+          className="mt-2 w-full bg-purple-600 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-purple-700 transition-colors"
+        >
+          Sí, cambiar a caja master ({cantMaster}u)
+        </button>
+      </div>
+    )
+  }
+
+  // Sugerencia caja chica: si la cantidad >= 50% de una caja chica
+  if (cantChica && precioChica && cant >= cantChica * 0.5 && cant < cantChica) {
+    const ahorro = (precioUnit * cantChica) - precioChica
+    return (
+      <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mt-2">
+        <p className="text-xs font-semibold text-orange-700 mb-1">📦 ¿Llevás una caja chica?</p>
+        <p className="text-xs text-orange-600">
+          {cantChica} unidades por ${precioChica.toLocaleString('es-AR')} — ahorrás ${ahorro.toLocaleString('es-AR')} vs unidades sueltas
+        </p>
+        <button
+          type="button"
+          onClick={() => onAceptar(cantChica, precioChica, 'chica')}
+          className="mt-2 w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-orange-600 transition-colors"
+        >
+          Sí, cambiar a caja chica ({cantChica}u)
+        </button>
+      </div>
+    )
+  }
+
+  // Info embalaje disponible (cuando ya cargó cantidad completa)
+  if (cantChica && precioChica && cant > 0 && cant % cantChica === 0) {
+    const cajas = cant / cantChica
+    const precioConCajas = cajas * precioChica
+    const precioSinCajas = cant * precioUnit
+    if (precioConCajas < precioSinCajas) {
+      const ahorro = precioSinCajas - precioConCajas
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mt-2">
+          <p className="text-xs font-semibold text-green-700 mb-1">✅ Precio por cajas aplicable</p>
+          <p className="text-xs text-green-600">
+            {cajas} caja{cajas > 1 ? 's' : ''} chica{cajas > 1 ? 's' : ''} → ${precioConCajas.toLocaleString('es-AR')} (ahorrás ${ahorro.toLocaleString('es-AR')})
+          </p>
+          <button
+            type="button"
+            onClick={() => onAceptar(cant, precioConCajas / cant, 'chica_multiple')}
+            className="mt-2 w-full bg-green-600 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-green-700 transition-colors"
+          >
+            Aplicar precio por cajas
+          </button>
+        </div>
+      )
+    }
+  }
+
+  return null
+}
+
 const PedidoModal = ({ onClose, onGuardado }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -31,7 +109,7 @@ const PedidoModal = ({ onClose, onGuardado }) => {
 
       const { data: prods } = await supabase
         .from('productos')
-        .select('id, nombre, codigo, precio_venta, precio_lista_2, alicuota_iva')
+        .select('id, nombre, codigo, precio_venta, precio_lista_2, alicuota_iva, cantidad_caja_chica, precio_caja_chica, cantidad_caja_master, precio_caja_master')
         .eq('activo', true)
         .eq('empresa_id', usuarioData.empresa_id)
         .order('nombre')
@@ -42,7 +120,6 @@ const PedidoModal = ({ onClose, onGuardado }) => {
     fetchData()
   }, [])
 
-  // Calcular descuento en cascada
   const calcularDescuentoCascada = (cascada) => {
     if (!cascada) return 0
     let precio = 100
@@ -53,7 +130,6 @@ const PedidoModal = ({ onClose, onGuardado }) => {
     return parseFloat((100 - precio).toFixed(2))
   }
 
-  // Aplicar descuento en cascada a un precio
   const aplicarCascada = (precio, cascada) => {
     if (!cascada) return precio
     let resultado = precio
@@ -64,14 +140,12 @@ const PedidoModal = ({ onClose, onGuardado }) => {
     return parseFloat(resultado.toFixed(2))
   }
 
-  // Cuando cambia el cliente — actualizar precios automáticamente
   const handleClienteChange = (id) => {
     setClienteId(id)
     const cliente = clientes.find(c => c.id === id)
     setClienteInfo(cliente || null)
 
     if (cliente) {
-      // Recalcular precios de todas las líneas con la nueva lista y descuento
       setLineas(prev => prev.map(linea => {
         if (!linea.producto_id) return linea
         const prod = productos.find(p => p.id === linea.producto_id)
@@ -108,6 +182,13 @@ const PedidoModal = ({ onClose, onGuardado }) => {
       }
     }
 
+    setLineas(nuevasLineas)
+  }
+
+  const handleUpsell = (index, cantidad, precioUnitario) => {
+    const nuevasLineas = [...lineas]
+    nuevasLineas[index].cantidad = cantidad
+    nuevasLineas[index].precio_unitario = precioUnitario
     setLineas(nuevasLineas)
   }
 
@@ -218,7 +299,6 @@ const PedidoModal = ({ onClose, onGuardado }) => {
               ))}
             </select>
 
-            {/* Info del cliente seleccionado */}
             {clienteInfo && (
               <div className="mt-2 flex gap-2 flex-wrap">
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -299,7 +379,15 @@ const PedidoModal = ({ onClose, onGuardado }) => {
                       </div>
                     )}
 
-                    {/* Info precio original vs con descuento */}
+                    {/* Upsell banner */}
+                    {linea.producto_id && (
+                      <UpsellBanner
+                        producto={prod}
+                        cantidad={linea.cantidad}
+                        onAceptar={(cantidad, precioUnitario) => handleUpsell(index, cantidad, precioUnitario)}
+                      />
+                    )}
+
                     {linea.producto_id && linea.descuento_cascada > 0 && (
                       <div className="flex justify-between items-center bg-orange-50 rounded-lg px-3 py-1.5">
                         <p className="text-xs text-orange-600">
@@ -311,11 +399,24 @@ const PedidoModal = ({ onClose, onGuardado }) => {
                       </div>
                     )}
 
-                    {/* IVA del producto */}
+                    {/* Info embalajes disponibles */}
+                    {prod && (prod.cantidad_caja_chica || prod.cantidad_caja_master) && (
+                      <div className="flex gap-2 flex-wrap">
+                        {prod.cantidad_caja_chica && prod.precio_caja_chica && (
+                          <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">
+                            📦 Caja chica: {prod.cantidad_caja_chica}u · ${Number(prod.precio_caja_chica).toLocaleString('es-AR')}
+                          </span>
+                        )}
+                        {prod.cantidad_caja_master && prod.precio_caja_master && (
+                          <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">
+                            🏭 Master: {prod.cantidad_caja_master}u · ${Number(prod.precio_caja_master).toLocaleString('es-AR')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {prod && (
-                      <p className="text-xs text-gray-400">
-                        IVA {prod.alicuota_iva ?? 21}%
-                      </p>
+                      <p className="text-xs text-gray-400">IVA {prod.alicuota_iva ?? 21}%</p>
                     )}
                   </div>
                 )
@@ -338,20 +439,16 @@ const PedidoModal = ({ onClose, onGuardado }) => {
           {/* Resumen */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-2">
             {ahorroTotal > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Subtotal lista</span>
-                <span className="text-gray-400 line-through">
-                  ${subtotalOriginal.toLocaleString('es-AR')}
-                </span>
-              </div>
-            )}
-            {ahorroTotal > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-orange-600 font-medium">Descuento aplicado</span>
-                <span className="text-orange-600 font-medium">
-                  -${ahorroTotal.toLocaleString('es-AR')}
-                </span>
-              </div>
+              <>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Subtotal lista</span>
+                  <span className="text-gray-400 line-through">${subtotalOriginal.toLocaleString('es-AR')}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-orange-600 font-medium">Descuento aplicado</span>
+                  <span className="text-orange-600 font-medium">-${ahorroTotal.toLocaleString('es-AR')}</span>
+                </div>
+              </>
             )}
             <div className="flex justify-between items-center border-t border-gray-200 pt-2">
               <span className="text-sm text-gray-500">Total del pedido</span>

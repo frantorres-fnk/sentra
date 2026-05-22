@@ -15,6 +15,10 @@ const ProductoModal = ({ onClose, onGuardado }) => {
     precio_costo: '',
     clasificacion: 'B',
     alicuota_iva: 21,
+    cantidad_caja_chica: '',
+    precio_caja_chica: '',
+    cantidad_caja_master: '',
+    precio_caja_master: '',
   })
 
   const handleChange = (e) => {
@@ -48,6 +52,10 @@ const ProductoModal = ({ onClose, onGuardado }) => {
         precio_lista_2: Number(form.precio_lista_2) || 0,
         precio_costo: Number(form.precio_costo) || 0,
         alicuota_iva: Number(form.alicuota_iva),
+        cantidad_caja_chica: form.cantidad_caja_chica ? Number(form.cantidad_caja_chica) : null,
+        precio_caja_chica: form.precio_caja_chica ? Number(form.precio_caja_chica) : null,
+        cantidad_caja_master: form.cantidad_caja_master ? Number(form.cantidad_caja_master) : null,
+        precio_caja_master: form.precio_caja_master ? Number(form.precio_caja_master) : null,
       }])
 
     if (error) {
@@ -67,6 +75,19 @@ const ProductoModal = ({ onClose, onGuardado }) => {
     10.5: 'bg-yellow-50 border-yellow-200 text-yellow-700',
     0: 'bg-gray-50 border-gray-200 text-gray-600',
   }
+
+  // Preview embalaje
+  const precioUnit = Number(form.precio_venta) || 0
+  const cantChica = Number(form.cantidad_caja_chica) || 0
+  const precioChica = Number(form.precio_caja_chica) || 0
+  const cantMaster = Number(form.cantidad_caja_master) || 0
+  const precioMaster = Number(form.precio_caja_master) || 0
+  const descChica = cantChica && precioChica && precioUnit
+    ? (((precioUnit * cantChica - precioChica) / (precioUnit * cantChica)) * 100).toFixed(1)
+    : null
+  const descMaster = cantMaster && precioMaster && precioUnit
+    ? (((precioUnit * cantMaster - precioMaster) / (precioUnit * cantMaster)) * 100).toFixed(1)
+    : null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
@@ -145,6 +166,84 @@ const ProductoModal = ({ onClose, onGuardado }) => {
                 <input name="precio_costo" type="number" value={form.precio_costo} onChange={handleChange} placeholder="$0"
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white" />
               </div>
+            </div>
+          </div>
+
+          {/* Embalajes */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">
+              Embalajes (opcional)
+            </p>
+            <div className="space-y-3">
+
+              {/* Caja chica */}
+              <div className="bg-orange-50 rounded-xl p-3">
+                <p className="text-sm font-semibold text-orange-700 mb-2">📦 Caja chica</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-orange-600 mb-1">Unidades por caja</label>
+                    <input
+                      name="cantidad_caja_chica"
+                      type="number"
+                      value={form.cantidad_caja_chica}
+                      onChange={handleChange}
+                      placeholder="ej: 20"
+                      className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-orange-600 mb-1">Precio por caja</label>
+                    <input
+                      name="precio_caja_chica"
+                      type="number"
+                      value={form.precio_caja_chica}
+                      onChange={handleChange}
+                      placeholder="$0"
+                      className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+                    />
+                  </div>
+                </div>
+                {descChica && (
+                  <p className="text-xs text-orange-600 mt-1.5 font-medium">
+                    💰 {descChica}% más barato que por unidad
+                  </p>
+                )}
+              </div>
+
+              {/* Caja master */}
+              <div className="bg-purple-50 rounded-xl p-3">
+                <p className="text-sm font-semibold text-purple-700 mb-2">🏭 Caja master</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-purple-600 mb-1">Unidades por master</label>
+                    <input
+                      name="cantidad_caja_master"
+                      type="number"
+                      value={form.cantidad_caja_master}
+                      onChange={handleChange}
+                      placeholder="ej: 200"
+                      className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-purple-600 mb-1">Precio por master</label>
+                    <input
+                      name="precio_caja_master"
+                      type="number"
+                      value={form.precio_caja_master}
+                      onChange={handleChange}
+                      placeholder="$0"
+                      className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+                    />
+                  </div>
+                </div>
+                {descMaster && (
+                  <p className="text-xs text-purple-600 mt-1.5 font-medium">
+                    💰 {descMaster}% más barato que por unidad
+                  </p>
+                )}
+              </div>
+
             </div>
           </div>
 
