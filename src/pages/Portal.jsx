@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const Portal = () => {
-  const [paso, setPaso] = useState('email') // email | otp | portal
+  const [paso, setPaso] = useState('email')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [cliente, setCliente] = useState(null)
@@ -16,9 +15,7 @@ const Portal = () => {
   const [cotizaciones, setCotizaciones] = useState([])
   const [seccion, setSeccion] = useState('inicio')
   const inputsRef = useRef([])
-  const navigate = useNavigate()
 
-  // Countdown OTP
   useEffect(() => {
     if (paso !== 'otp') return
     setSegundos(60)
@@ -97,12 +94,13 @@ const Portal = () => {
     }
 
     const [pedidosRes, cotizacionesRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=*`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
     ])
 
     const pedidosData = await pedidosRes.json()
     const cotizacionesData = await cotizacionesRes.json()
+
     setPedidos(Array.isArray(pedidosData) ? pedidosData : [])
     setCotizaciones(Array.isArray(cotizacionesData) ? cotizacionesData : [])
   }
@@ -116,12 +114,29 @@ const Portal = () => {
     cancelado:  'bg-gray-100 text-gray-400',
   }
 
+  const estadoPedidoLabel = {
+    pendiente:  'Pendiente',
+    aprobado:   'Aprobado',
+    en_reparto: 'En reparto',
+    entregado:  'Entregado',
+    rechazado:  'Rechazado',
+    cancelado:  'Cancelado',
+  }
+
   const estadoCotColor = {
     borrador:  'bg-gray-100 text-gray-500',
     enviada:   'bg-blue-50 text-blue-600',
     aprobada:  'bg-green-50 text-green-600',
     rechazada: 'bg-red-50 text-red-600',
     vencida:   'bg-gray-100 text-gray-400',
+  }
+
+  const estadoCotLabel = {
+    borrador:  'Borrador',
+    enviada:   'Enviada',
+    aprobada:  'Aprobada',
+    rechazada: 'Rechazada',
+    vencida:   'Vencida',
   }
 
   // ── LOGIN EMAIL ──────────────────────────────────────────────────────
@@ -131,7 +146,6 @@ const Portal = () => {
         <img src="/sentra-logo.png" alt="Sentra" className="h-12 mx-auto mb-6" />
         <h2 className="text-xl font-bold text-[#0F1F3D] text-center mb-1">Portal de clientes</h2>
         <p className="text-sm text-gray-400 text-center mb-6">Ingresá tu email para continuar</p>
-
         <form onSubmit={handleEmail} className="space-y-4">
           <input
             type="email"
@@ -163,13 +177,9 @@ const Portal = () => {
         <p className="text-sm text-gray-400 text-center mb-2">
           Enviamos un código a <span className="font-medium text-[#0F1F3D]">{email}</span>
         </p>
-
-        {/* Countdown */}
         <div className={`text-center mb-6 text-2xl font-bold ${segundos <= 10 ? 'text-red-500' : 'text-[#00C896]'}`}>
           00:{String(segundos).padStart(2, '0')}
         </div>
-
-        {/* Inputs OTP */}
         <div className="flex gap-2 justify-center mb-4">
           {otp.map((digit, i) => (
             <input
@@ -185,9 +195,7 @@ const Portal = () => {
             />
           ))}
         </div>
-
         {error && <p className="text-red-500 text-xs text-center mb-3">{error}</p>}
-
         {segundos === 0 && (
           <button
             onClick={() => { setOtp(['', '', '', '', '', '']); setPaso('email') }}
@@ -196,7 +204,6 @@ const Portal = () => {
             Solicitar nuevo código
           </button>
         )}
-
         {loading && <p className="text-center text-sm text-gray-400 mt-2">Verificando...</p>}
       </div>
     </div>
@@ -204,6 +211,7 @@ const Portal = () => {
 
   // ── PORTAL ───────────────────────────────────────────────────────────
   const pendientes = pedidos.filter(p => p.estado === 'pendiente').length
+  const enReparto = pedidos.filter(p => p.estado === 'en_reparto').length
   const cotsPendientes = cotizaciones.filter(c => c.estado === 'enviada').length
 
   return (
@@ -215,7 +223,7 @@ const Portal = () => {
         <div className="flex items-center gap-3">
           <span className="text-white text-sm hidden md:block">{cliente?.razon_social}</span>
           <button
-            onClick={() => { setCliente(null); setPaso('email'); setEmail('') }}
+            onClick={() => { setCliente(null); setPaso('email'); setEmail(''); setPedidos([]); setCotizaciones([]) }}
             className="text-xs bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-colors"
           >
             Salir
@@ -225,7 +233,7 @@ const Portal = () => {
 
       {/* Nav secciones */}
       <div className="bg-white border-b border-gray-100 px-4">
-        <div className="flex gap-1 max-w-2xl mx-auto">
+        <div className="flex gap-1 max-w-2xl mx-auto overflow-x-auto">
           {[
             { id: 'inicio',       label: '🏠 Inicio' },
             { id: 'pedidos',      label: '🛒 Pedidos' },
@@ -235,7 +243,7 @@ const Portal = () => {
             <button
               key={s.id}
               onClick={() => setSeccion(s.id)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 seccion === s.id
                   ? 'border-[#00C896] text-[#00C896]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -275,10 +283,22 @@ const Portal = () => {
                 <p className="text-xs text-gray-400 mt-1">Pendientes</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                <p className="text-2xl font-bold text-blue-500">{cotsPendientes}</p>
-                <p className="text-xs text-gray-400 mt-1">Cotizaciones</p>
+                <p className="text-2xl font-bold text-blue-500">{enReparto}</p>
+                <p className="text-xs text-gray-400 mt-1">En reparto</p>
               </div>
             </div>
+
+            {cotsPendientes > 0 && (
+              <div
+                onClick={() => setSeccion('cotizaciones')}
+                className="bg-blue-50 border border-blue-100 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition-colors"
+              >
+                <p className="text-sm font-semibold text-blue-700">
+                  📋 Tenés {cotsPendientes} cotización{cotsPendientes > 1 ? 'es' : ''} esperando tu aprobación
+                </p>
+                <p className="text-xs text-blue-500 mt-0.5">Tocá para ver →</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -293,15 +313,16 @@ const Portal = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs font-mono text-gray-400">#{p.id.slice(-6).toUpperCase()}</p>
-                    <p className="text-sm font-semibold text-[#0F1F3D] mt-0.5">
+                    <p className="text-lg font-bold text-[#0F1F3D] mt-0.5">
                       ${Number(p.total || 0).toLocaleString('es-AR')}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(p.fecha_pedido).toLocaleDateString('es-AR')}
+                      📅 {new Date(p.fecha_pedido).toLocaleDateString('es-AR')}
                     </p>
+                    {p.nota && <p className="text-xs text-gray-500 mt-1">📝 {p.nota}</p>}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${estadoPedidoColor[p.estado] || 'bg-gray-100 text-gray-500'}`}>
-                    {p.estado}
+                    {estadoPedidoLabel[p.estado] || p.estado}
                   </span>
                 </div>
               </div>
@@ -320,17 +341,20 @@ const Portal = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs font-mono text-gray-400">#{c.id.slice(-6).toUpperCase()}</p>
-                    <p className="text-sm font-semibold text-[#0F1F3D] mt-0.5">
+                    <p className="text-lg font-bold text-[#0F1F3D] mt-0.5">
                       ${Number(c.total || 0).toLocaleString('es-AR')}
                     </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      📅 {new Date(c.created_at).toLocaleDateString('es-AR')}
+                    </p>
                     {c.vencimiento && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Vence: {new Date(c.vencimiento).toLocaleDateString('es-AR')}
+                      <p className={`text-xs mt-0.5 ${new Date(c.vencimiento) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
+                        ⏱ Vence: {new Date(c.vencimiento).toLocaleDateString('es-AR')}
                       </p>
                     )}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${estadoCotColor[c.estado] || 'bg-gray-100 text-gray-500'}`}>
-                    {c.estado}
+                    {estadoCotLabel[c.estado] || c.estado}
                   </span>
                 </div>
               </div>
@@ -342,12 +366,12 @@ const Portal = () => {
         {seccion === 'cuenta' && (
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Mi cuenta corriente</h3>
-            <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm text-center">
-              <p className="text-xs text-gray-400 mb-1">Saldo actual</p>
-              <p className="text-3xl font-bold text-[#0F1F3D]">
+            <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+              <p className="text-xs text-gray-400 mb-1 text-center">Saldo actual</p>
+              <p className="text-3xl font-bold text-center text-[#0F1F3D]">
                 ${Number(0).toLocaleString('es-AR')}
               </p>
-              <p className="text-xs text-gray-400 mt-2">Contactá a tu vendedor para más detalles</p>
+              <p className="text-xs text-gray-400 mt-2 text-center">Contactá a tu vendedor para más detalles</p>
             </div>
           </div>
         )}
