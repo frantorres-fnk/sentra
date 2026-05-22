@@ -77,6 +77,7 @@ const Portal = () => {
     const data = await callPortalOTP({ email, otp: codigo })
     if (data.success) {
       setCliente(data)
+      setSaldoCC(data.saldo_cc ?? 0)
       await fetchDatosPortal(data.cliente_id)
       setPaso('portal')
     } else {
@@ -94,19 +95,16 @@ const Portal = () => {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     }
 
-    const [pedidosRes, cotizacionesRes, clienteRes] = await Promise.all([
+    const [pedidosRes, cotizacionesRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/pedidos?cliente_id=eq.${clienteId}&order=fecha_pedido.desc&select=id,estado,total,subtotal,descuento,fecha_pedido,nota`, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cliente_id=eq.${clienteId}&order=created_at.desc&select=id,estado,total,vencimiento,created_at`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/clientes?id=eq.${clienteId}&select=saldo_cc`, { headers }),
     ])
 
     const pedidosData = await pedidosRes.json()
     const cotizacionesData = await cotizacionesRes.json()
-    const clienteData = await clienteRes.json()
 
     setPedidos(Array.isArray(pedidosData) ? pedidosData : [])
     setCotizaciones(Array.isArray(cotizacionesData) ? cotizacionesData : [])
-    setSaldoCC(clienteData?.[0]?.saldo_cc ?? 0)
   }
 
   const estadoPedidoColor = {
