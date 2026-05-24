@@ -15,12 +15,18 @@ export default function SplashScreen({ onFinish }) {
 
       {/* Logo */}
       <div className="flex flex-col items-center gap-6">
-        <img
-          src="/sentra-logo.png"
-          alt="Sentra"
-          className="w-28 h-28 object-contain drop-shadow-2xl"
-          style={{ filter: 'brightness(1.1) contrast(1.05)' }}
-        />
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon
+            points="32,4 58,18 58,46 32,60 6,46 6,18"
+            stroke="#60A5FA"
+            strokeWidth="2"
+            fill="#0F1F3D"
+          />
+          <path
+            d="M32 42 C28 36 24 32 28 24 C29 28 31 29 32 28 C33 29 35 28 36 24 C40 32 36 36 32 42Z"
+            fill="#60A5FA"
+          />
+        </svg>
 
         {/* Nombre */}
         <div className="text-center">
