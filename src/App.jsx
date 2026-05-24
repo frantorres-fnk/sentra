@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import SplashScreen from './components/SplashScreen'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Clientes from './pages/Clientes'
@@ -29,6 +31,12 @@ const Layout = ({ children }) => (
 )
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true)
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
