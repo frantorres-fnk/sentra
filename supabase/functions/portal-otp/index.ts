@@ -63,7 +63,14 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, cliente_id: clientes[0].id, razon_social: clientes[0].razon_social, saldo_cc: clientes[0].saldo_cc ?? 0 }),
+        JSON.stringify({
+          success: true,
+          cliente_id: clientes[0].id,
+          razon_social: clientes[0].razon_social,
+          saldo_cc: clientes[0].saldo_cc ?? 0,
+          empresa_id: clientes[0].empresa_id,
+          lista_precio: clientes[0].lista_precio ?? 1,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }

@@ -116,7 +116,6 @@ const Portal = () => {
   const fetchProductos = async () => {
     setLoadingProductos(true)
     try {
-      const empresaId = await fetchEmpresaId(cliente.cliente_id)
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal-productos`, {
         method: 'POST',
         headers: {
@@ -125,7 +124,7 @@ const Portal = () => {
           'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          empresa_id: empresaId,
+          empresa_id: cliente?.empresa_id,
           lista_precio: cliente?.lista_precio || 1,
         }),
       })
@@ -135,17 +134,6 @@ const Portal = () => {
       setProductos([])
     } finally {
       setLoadingProductos(false)
-    }
-  }
-
-  const fetchEmpresaId = async (clienteId) => {
-    try {
-      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/clientes?id=eq.${clienteId}&select=empresa_id`, { headers })
-      const data = await res.json()
-      return data?.[0]?.empresa_id ?? null
-    } catch {
-      return null
     }
   }
 
@@ -186,13 +174,11 @@ const Portal = () => {
       const total    = items.reduce((a, i) => a + i.precioDesc * i.cantidad, 0)
       const descuento = subtotal - total
 
-      const empresa_id = await fetchEmpresaId(cliente.cliente_id)
-
       const pedidoRes = await fetch(`${SUPABASE_URL}/rest/v1/pedidos`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          empresa_id,
+          empresa_id: cliente?.empresa_id,
           cliente_id: cliente.cliente_id,
           estado: 'pendiente',
           subtotal: parseFloat(subtotal.toFixed(2)),
