@@ -4,24 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  build: {
-    rollupOptions: {
-      output: {
-        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-      }
-    }
-  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      disable: true,
-      registerType: 'prompt',
-      workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-      },
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'sentra-logo.png'],
       manifest: {
         name: 'Sentra ERP',
