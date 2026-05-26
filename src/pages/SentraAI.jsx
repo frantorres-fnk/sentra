@@ -58,14 +58,23 @@ const SentraAI = () => {
       contexto += `\nPROVEEDORES:\n${JSON.stringify(data)}`
     }
 
+    // Cotizaciones
+    if (q.includes('cotizacion') || q.includes('cotización') || q.includes('presupuesto')) {
+      const { data } = await supabase
+        .from('cotizaciones')
+        .select('estado, total, vencimiento, clientes(razon_social)')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      contexto += `\nCOTIZACIONES:\n${JSON.stringify(data)}`
+    }
+
     return contexto
   }
 
-  const enviarMensaje = async () => {
-    if (!mensaje.trim() || loading) return
-
-    const pregunta = mensaje.trim()
-    setMensaje('')
+  const enviarMensaje = async (textoDirecto) => {
+    const pregunta = (textoDirecto || mensaje).trim()
+    if (!pregunta || loading) return
+    if (!textoDirecto) setMensaje('')
     setLoading(true)
 
     const nuevaConversacion = [...conversacion, { rol: 'usuario', texto: pregunta }]
@@ -114,6 +123,48 @@ ${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
     setLoading(false)
   }
 
+  const generarResumenDiario = async () => {
+    const hoy = new Date().toISOString().split('T')[0]
+
+    const [
+      { data: pedidosHoy },
+      { data: cobrosHoy },
+      { data: stockCritico },
+      { data: cajaHoy },
+    ] = await Promise.all([
+      supabase.from('pedidos')
+        .select('estado, total, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)')
+        .gte('fecha_pedido', hoy)
+        .order('fecha_pedido', { ascending: false }),
+      supabase.from('cobros')
+        .select('monto, estado, medio_pago, clientes(razon_social)')
+        .gte('created_at', hoy),
+      supabase.from('stock')
+        .select('cantidad, stock_minimo, productos(nombre, codigo)')
+        .filter('cantidad', 'lte', 'stock_minimo')
+        .limit(10),
+      supabase.from('operaciones_internas')
+        .select('tipo, monto, concepto')
+        .gte('created_at', hoy),
+    ])
+
+    const preguntaResumen = `Generame un resumen ejecutivo del día de hoy con estos datos reales:
+PEDIDOS DE HOY: ${JSON.stringify(pedidosHoy)}
+COBROS DE HOY: ${JSON.stringify(cobrosHoy)}
+STOCK CRÍTICO: ${JSON.stringify(stockCritico)}
+CAJA CHICA HOY: ${JSON.stringify(cajaHoy)}
+
+El resumen debe incluir:
+- Total vendido hoy y cantidad de pedidos
+- Total cobrado hoy
+- Alertas de stock crítico si hay
+- Movimientos de caja chica si hay
+- Una conclusión con el estado general del negocio
+Sé conciso, usa emojis y formato claro.`
+
+    await enviarMensaje(preguntaResumen)
+  }
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -122,6 +173,7 @@ ${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
   }
 
   const sugerencias = [
+    '📊 ¿Cómo viene el día?',
     '¿Quiénes son mis morosos?',
     '¿Qué productos tienen stock bajo?',
     '¿Cuánto vendí esta semana?',
@@ -196,6 +248,15 @@ ${contexto || 'No se encontraron datos relevantes para esta consulta.'}`,
           </div>
         )}
       </div>
+
+      {/* Resumen del día */}
+      <button
+        onClick={generarResumenDiario}
+        disabled={loading}
+        className="w-full bg-[#0F1F3D] text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a2f5a] transition-colors disabled:opacity-50 mb-2"
+      >
+        {loading ? 'Generando resumen...' : '📊 Resumen del día'}
+      </button>
 
       {/* Input */}
       <div className="flex gap-2 items-end">
