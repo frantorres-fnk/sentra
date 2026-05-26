@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import * as XLSX from 'xlsx'
 
 const SentraAIPanel = ({ onClose }) => {
   const [mensaje, setMensaje] = useState('')
@@ -35,6 +36,12 @@ const SentraAIPanel = ({ onClose }) => {
       contexto += `\nCOTIZACIONES:\n${JSON.stringify(data)}`
     }
 
+    if (q.includes('export') || q.includes('excel') || q.includes('xlsx') || q.includes('descargar')) {
+      if (q.includes('venta') || q.includes('pedido')) { exportarExcel('ventas'); return '' }
+      if (q.includes('cliente')) { exportarExcel('clientes'); return '' }
+      if (q.includes('stock') || q.includes('inventario')) { exportarExcel('stock'); return '' }
+    }
+
     return contexto
   }
 
@@ -58,6 +65,82 @@ STOCK CRÍTICO: ${JSON.stringify(stockCritico)}
 CAJA CHICA HOY: ${JSON.stringify(cajaHoy)}
 El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crítico, movimientos de caja chica, conclusión del estado general. Sé conciso, usa emojis y formato claro.`
     await enviarMensaje(preguntaResumen)
+  }
+
+  const exportarExcel = async (tipo) => {
+    setLoading(true)
+    let data = []
+    let nombreArchivo = ''
+
+    if (tipo === 'ventas') {
+      const { data: pedidos } = await supabase
+        .from('pedidos')
+        .select('id, estado, total, subtotal, descuento, fecha_pedido, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)')
+        .order('fecha_pedido', { ascending: false })
+        .limit(100)
+      data = (pedidos || []).map(p => ({
+        'ID': p.id.slice(-6).toUpperCase(),
+        'Cliente': p.clientes?.razon_social || '-',
+        'Vendedor': p.usuarios?.nombre || '-',
+        'Estado': p.estado,
+        'Subtotal': p.subtotal,
+        'Descuento': p.descuento,
+        'Total': p.total,
+        'Fecha': new Date(p.fecha_pedido).toLocaleDateString('es-AR'),
+      }))
+      nombreArchivo = 'ventas-sentra.xlsx'
+    }
+
+    if (tipo === 'clientes') {
+      const { data: clientes } = await supabase
+        .from('clientes')
+        .select('razon_social, nombre_fantasia, cuit, email, telefono, zona, saldo_cc, activo, bloqueado')
+        .order('razon_social')
+      data = (clientes || []).map(c => ({
+        'Razón Social': c.razon_social,
+        'Nombre Fantasía': c.nombre_fantasia || '-',
+        'CUIT': c.cuit || '-',
+        'Email': c.email || '-',
+        'Teléfono': c.telefono || '-',
+        'Zona': c.zona || '-',
+        'Saldo CC': c.saldo_cc || 0,
+        'Activo': c.activo ? 'Sí' : 'No',
+        'Bloqueado': c.bloqueado ? 'Sí' : 'No',
+      }))
+      nombreArchivo = 'clientes-sentra.xlsx'
+    }
+
+    if (tipo === 'stock') {
+      const { data: stockData } = await supabase
+        .from('stock')
+        .select('cantidad, stock_minimo, productos(nombre, codigo, precio_venta)')
+        .order('cantidad', { ascending: true })
+      data = (stockData || []).map(s => ({
+        'Código': s.productos?.codigo || '-',
+        'Producto': s.productos?.nombre || '-',
+        'Precio': s.productos?.precio_venta || 0,
+        'Stock': s.cantidad,
+        'Stock Mínimo': s.stock_minimo,
+        'Estado': s.cantidad <= s.stock_minimo ? '⚠️ Crítico' : '✅ OK',
+      }))
+      nombreArchivo = 'stock-sentra.xlsx'
+    }
+
+    if (data.length === 0) {
+      setLoading(false)
+      return
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos')
+    XLSX.writeFile(wb, nombreArchivo)
+    setLoading(false)
+
+    setConversacion(prev => [...prev,
+      { rol: 'usuario', texto: `Exportar ${tipo} a Excel` },
+      { rol: 'ai', texto: `✅ Archivo **${nombreArchivo}** descargado con ${data.length} registros.` }
+    ])
   }
 
   const enviarMensaje = async (textoDirecto) => {
@@ -186,6 +269,22 @@ ${contexto}`,
             className="w-full bg-[#0F1F3D] text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a2f5a] transition-colors disabled:opacity-50"
           >
             {loading ? 'Generando resumen...' : '📊 Resumen del día'}
+          </button>
+        </div>
+
+        {/* Exportar Excel */}
+        <div className="px-4 pb-2 flex gap-2 shrink-0">
+          <button onClick={() => exportarExcel('ventas')} disabled={loading}
+            className="flex-1 bg-green-50 text-green-700 rounded-lg py-2 text-xs font-medium hover:bg-green-100 transition-colors disabled:opacity-50">
+            📥 Ventas
+          </button>
+          <button onClick={() => exportarExcel('clientes')} disabled={loading}
+            className="flex-1 bg-blue-50 text-blue-700 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors disabled:opacity-50">
+            📥 Clientes
+          </button>
+          <button onClick={() => exportarExcel('stock')} disabled={loading}
+            className="flex-1 bg-orange-50 text-orange-700 rounded-lg py-2 text-xs font-medium hover:bg-orange-100 transition-colors disabled:opacity-50">
+            📥 Stock
           </button>
         </div>
 
