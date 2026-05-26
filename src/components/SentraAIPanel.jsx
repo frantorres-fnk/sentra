@@ -36,6 +36,40 @@ const SentraAIPanel = ({ onClose }) => {
       contexto += `\nCOTIZACIONES:\n${JSON.stringify(data)}`
     }
 
+    if (q.includes('pdf') || q.includes('imprimir') || q.includes('imprimí') || q.includes('generame') || q.includes('generá')) {
+      if (q.includes('moroso') || (q.includes('debe') && q.includes('pdf'))) {
+        const { data } = await supabase.from('clientes')
+          .select('razon_social, saldo_cc, zona, telefono')
+          .gt('saldo_cc', 0)
+          .order('saldo_cc', { ascending: false })
+        await generarPDF('morosos', data || [], 'Clientes Morosos')
+        return ''
+      }
+      if (q.includes('pedido') || q.includes('venta')) {
+        const { data } = await supabase.from('pedidos')
+          .select('id, estado, total, fecha_pedido, clientes(razon_social)')
+          .order('fecha_pedido', { ascending: false })
+          .limit(50)
+        await generarPDF('pedidos', data || [], 'Reporte de Pedidos')
+        return ''
+      }
+      if (q.includes('stock') || q.includes('inventario')) {
+        const { data } = await supabase.from('stock')
+          .select('cantidad, stock_minimo, productos(nombre, codigo)')
+          .order('cantidad', { ascending: true })
+        await generarPDF('stock', data || [], 'Reporte de Stock')
+        return ''
+      }
+      if (q.includes('cliente')) {
+        const { data } = await supabase.from('clientes')
+          .select('razon_social, cuit, email, telefono, zona')
+          .eq('activo', true)
+          .order('razon_social')
+        await generarPDF('clientes', data || [], 'Listado de Clientes')
+        return ''
+      }
+    }
+
     if (q.includes('export') || q.includes('excel') || q.includes('xlsx') || q.includes('descargar')) {
       if (q.includes('venta') || q.includes('pedido')) { exportarExcel('ventas'); return '' }
       if (q.includes('cliente')) { exportarExcel('clientes'); return '' }
@@ -65,6 +99,113 @@ STOCK CRÍTICO: ${JSON.stringify(stockCritico)}
 CAJA CHICA HOY: ${JSON.stringify(cajaHoy)}
 El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crítico, movimientos de caja chica, conclusión del estado general. Sé conciso, usa emojis y formato claro.`
     await enviarMensaje(preguntaResumen)
+  }
+
+  const generarPDF = async (tipo, datos, titulo) => {
+    const fecha = new Date().toLocaleDateString('es-AR')
+    const empresa = 'Eléctrica Urbano'
+
+    let filas = ''
+    let columnas = []
+
+    if (tipo === 'morosos') {
+      columnas = ['Cliente', 'Saldo CC', 'Zona', 'Teléfono']
+      filas = datos.map(c => `
+        <tr>
+          <td>${c.razon_social}</td>
+          <td style="color:red;font-weight:bold;">$${Number(c.saldo_cc).toLocaleString('es-AR')}</td>
+          <td>${c.zona || '-'}</td>
+          <td>${c.telefono || '-'}</td>
+        </tr>`).join('')
+    }
+    if (tipo === 'pedidos') {
+      columnas = ['ID', 'Cliente', 'Estado', 'Total', 'Fecha']
+      filas = datos.map(p => `
+        <tr>
+          <td>#${p.id.slice(-6).toUpperCase()}</td>
+          <td>${p.clientes?.razon_social || '-'}</td>
+          <td>${p.estado}</td>
+          <td>$${Number(p.total).toLocaleString('es-AR')}</td>
+          <td>${new Date(p.fecha_pedido).toLocaleDateString('es-AR')}</td>
+        </tr>`).join('')
+    }
+    if (tipo === 'stock') {
+      columnas = ['Código', 'Producto', 'Stock', 'Mínimo', 'Estado']
+      filas = datos.map(s => `
+        <tr>
+          <td>${s.productos?.codigo || '-'}</td>
+          <td>${s.productos?.nombre || '-'}</td>
+          <td>${s.cantidad}</td>
+          <td>${s.stock_minimo}</td>
+          <td style="color:${s.cantidad <= s.stock_minimo ? 'red' : 'green'}">${s.cantidad <= s.stock_minimo ? '⚠️ Crítico' : '✅ OK'}</td>
+        </tr>`).join('')
+    }
+    if (tipo === 'clientes') {
+      columnas = ['Cliente', 'CUIT', 'Email', 'Teléfono', 'Zona']
+      filas = datos.map(c => `
+        <tr>
+          <td>${c.razon_social}</td>
+          <td>${c.cuit || '-'}</td>
+          <td>${c.email || '-'}</td>
+          <td>${c.telefono || '-'}</td>
+          <td>${c.zona || '-'}</td>
+        </tr>`).join('')
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; padding: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0F1F3D; padding-bottom: 12px; margin-bottom: 20px; }
+    .empresa { font-size: 20px; font-weight: bold; color: #0F1F3D; }
+    .titulo { font-size: 14px; color: #666; margin-top: 4px; }
+    .fecha { font-size: 12px; color: #999; text-align: right; }
+    .badge { background: #0F1F3D; color: white; font-size: 11px; padding: 4px 10px; border-radius: 20px; margin-top: 4px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    thead tr { background: #0F1F3D; color: white; }
+    thead th { padding: 10px 12px; text-align: left; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #f8f9fa; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #eee; }
+    .total { margin-top: 16px; text-align: right; font-size: 14px; color: #0F1F3D; font-weight: bold; }
+    .footer { margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; text-align: center; font-size: 11px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="empresa">${empresa}</div>
+      <div class="titulo">${titulo}</div>
+      <div class="badge">SENTRA ERP</div>
+    </div>
+    <div class="fecha">
+      <div>Generado el</div>
+      <div style="font-weight:bold;color:#0F1F3D;">${fecha}</div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>${columnas.map(c => `<th>${c}</th>`).join('')}</tr>
+    </thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <div class="total">${datos.length} registros</div>
+  <div class="footer">Documento generado por SENTRA · ${empresa} · ${fecha}</div>
+</body>
+</html>`
+
+    const ventana = window.open('', '_blank')
+    ventana.document.write(html)
+    ventana.document.close()
+    ventana.focus()
+    setTimeout(() => ventana.print(), 500)
+
+    setConversacion(prev => [...prev,
+      { rol: 'ai', texto: `✅ PDF **${titulo}** generado con ${datos.length} registros. Se abrió la ventana de impresión.` }
+    ])
   }
 
   const exportarExcel = async (tipo) => {
