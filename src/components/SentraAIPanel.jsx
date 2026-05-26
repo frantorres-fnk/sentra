@@ -257,47 +257,42 @@ El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crí
     const nuevaConversacion = [...conversacion, { rol: 'usuario', texto: pregunta }]
     setConversacion(nuevaConversacion)
 
-    const q = pregunta.toLowerCase()
-
-    // Detección PDF — ejecutar directo sin AI
-    if (q.includes('pdf') || q.includes('imprimir') || q.includes('imprimí') || q.includes('generame') || q.includes('generá')) {
-      if (q.includes('moroso') || (q.includes('debe') && q.includes('pdf'))) {
-        const { data } = await supabase.from('clientes').select('razon_social, saldo_cc, zona, telefono').gt('saldo_cc', 0).order('saldo_cc', { ascending: false })
-        await generarPDF('morosos', data || [], 'Clientes Morosos')
-        setLoading(false)
-        return
-      }
-      if (q.includes('pedido') || q.includes('venta')) {
-        const { data } = await supabase.from('pedidos').select('id, estado, total, fecha_pedido, clientes(razon_social)').order('fecha_pedido', { ascending: false }).limit(50)
-        await generarPDF('pedidos', data || [], 'Reporte de Pedidos')
-        setLoading(false)
-        return
-      }
-      if (q.includes('stock') || q.includes('inventario')) {
-        const { data } = await supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo)').order('cantidad', { ascending: true })
-        await generarPDF('stock', data || [], 'Reporte de Stock')
-        setLoading(false)
-        return
-      }
-      if (q.includes('cliente')) {
-        const { data } = await supabase.from('clientes').select('razon_social, cuit, email, telefono, zona').eq('activo', true).order('razon_social')
-        await generarPDF('clientes', data || [], 'Listado de Clientes')
-        setLoading(false)
-        return
-      }
-    }
-
-    // Detección Excel — ejecutar directo sin AI
-    if (q.includes('excel') || q.includes('xlsx') || q.includes('exportar') || q.includes('exportá') || q.includes('descargar')) {
-      if (q.includes('venta') || q.includes('pedido')) { await exportarExcel('ventas'); setLoading(false); return }
-      if (q.includes('cliente')) { await exportarExcel('clientes'); setLoading(false); return }
-      if (q.includes('stock') || q.includes('inventario')) { await exportarExcel('stock'); setLoading(false); return }
-    }
-
-    // Consultar datos y llamar a la AI
     try {
-      const contexto = await consultarDatos(pregunta)
+      const q = pregunta.toLowerCase()
 
+      // Detección PDF
+      if (q.includes('pdf') || q.includes('imprimir') || q.includes('generame') || q.includes('generá')) {
+        if (q.includes('moroso')) {
+          const { data } = await supabase.from('clientes').select('razon_social, saldo_cc, zona, telefono').gt('saldo_cc', 0).order('saldo_cc', { ascending: false })
+          await generarPDF('morosos', data || [], 'Clientes Morosos')
+          return
+        }
+        if (q.includes('pedido') || q.includes('venta')) {
+          const { data } = await supabase.from('pedidos').select('id, estado, total, fecha_pedido, clientes(razon_social)').order('fecha_pedido', { ascending: false }).limit(50)
+          await generarPDF('pedidos', data || [], 'Reporte de Pedidos')
+          return
+        }
+        if (q.includes('stock') || q.includes('inventario')) {
+          const { data } = await supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo)').order('cantidad', { ascending: true })
+          await generarPDF('stock', data || [], 'Reporte de Stock')
+          return
+        }
+        if (q.includes('cliente')) {
+          const { data } = await supabase.from('clientes').select('razon_social, cuit, email, telefono, zona').eq('activo', true).order('razon_social')
+          await generarPDF('clientes', data || [], 'Listado de Clientes')
+          return
+        }
+      }
+
+      // Detección Excel
+      if (q.includes('excel') || q.includes('xlsx') || q.includes('exportar') || q.includes('exportá') || q.includes('descargar')) {
+        if (q.includes('venta') || q.includes('pedido')) { await exportarExcel('ventas'); return }
+        if (q.includes('cliente')) { await exportarExcel('clientes'); return }
+        if (q.includes('stock') || q.includes('inventario')) { await exportarExcel('stock'); return }
+      }
+
+      // AI normal
+      const contexto = await consultarDatos(pregunta)
       const { data, error } = await supabase.functions.invoke('sentra-ai', {
         body: {
           system: `Sos SENTRA AI, el asistente inteligente de Eléctrica Urbano.
@@ -308,23 +303,21 @@ Nunca inventés datos — solo usá lo que te dan en el contexto.
 Si no encontrás algo, buscá bien antes de decir que no existe.
 Usá emojis con moderación.
 Siempre que puedas, terminá con una sugerencia o acción concreta.
-Si te preguntan por un cliente específico, buscalo por nombre aunque esté mal escrito.
 
 DATOS COMPLETOS DEL SISTEMA:
 ${contexto}`,
           messages: [{ role: 'user', content: pregunta }],
         },
       })
-
       if (error) throw error
-
       const respuesta = data?.content?.[0]?.text || 'No pude procesar la consulta.'
-      setConversacion([...nuevaConversacion, { rol: 'ai', texto: respuesta }])
-    } catch (error) {
-      setConversacion([...nuevaConversacion, { rol: 'ai', texto: '❌ Hubo un error. Intentá de nuevo.' }])
-    }
+      setConversacion(prev => [...prev, { rol: 'ai', texto: respuesta }])
 
-    setLoading(false)
+    } catch (err) {
+      setConversacion(prev => [...prev, { rol: 'ai', texto: '❌ Hubo un error. Intentá de nuevo.' }])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleKeyDown = (e) => {
