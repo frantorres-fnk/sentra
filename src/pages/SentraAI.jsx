@@ -281,5 +281,4 @@ Sé conciso, usa emojis y formato claro.`
   )
 }
 
-export default SentraAI/ /   b u i l d   0 5 / 2 6 / 2 0 2 6   1 7 : 2 1 : 4 7  
- 
+export default SentraAI
