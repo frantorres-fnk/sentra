@@ -29,7 +29,7 @@ const PedidoDetalle = ({ pedido, onClose, onActualizado }) => {
       if (pedido.cliente_id) {
         const { data: cliente } = await supabase
           .from('clientes')
-          .select('razon_social, nombre_fantasia, cuit, condicion_afip, direccion, provincia, telefono, email')
+          .select('razon_social, nombre_fantasia, cuit, condicion_afip, direccion, provincia, telefono, email, modalidad_facturacion')
           .eq('id', pedido.cliente_id)
           .single()
         setClienteInfo(cliente)
@@ -63,6 +63,36 @@ const PedidoDetalle = ({ pedido, onClose, onActualizado }) => {
       onActualizado()
       onClose()
     }
+  }
+
+  const registrarEnCajaChica = async () => {
+    setLoading(true)
+    setError(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: usuarioData } = await supabase
+      .from('usuarios')
+      .select('empresa_id, id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    const { error } = await supabase
+      .from('operaciones_internas')
+      .insert([{
+        empresa_id: usuarioData.empresa_id,
+        usuario_id: usuarioData.id,
+        concepto: `Venta sin factura — ${pedido.clientes?.razon_social || clienteInfo?.razon_social}`,
+        monto: pedido.total,
+        tipo: 'ingreso',
+        nota: `Pedido #${pedido.id.slice(-6).toUpperCase()}`,
+      }])
+
+    if (error) {
+      setError('Error al registrar en Caja Chica.')
+    } else {
+      onActualizado()
+      onClose()
+    }
+    setLoading(false)
   }
 
   const generarRemitoPDF = () => {
@@ -360,16 +390,23 @@ const PedidoDetalle = ({ pedido, onClose, onActualizado }) => {
         <div className="space-y-2">
 
           {pedido.estado === 'pendiente' && (
-            <div className="flex gap-3">
-              <button onClick={() => cambiarEstado('rechazado')} disabled={loading}
-                className="flex-1 border border-red-200 text-red-600 rounded-lg py-2.5 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
-                Rechazar
-              </button>
-              <button onClick={() => cambiarEstado('aprobado')} disabled={loading}
-                className="flex-1 bg-[#00C896] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#00b386] transition-colors disabled:opacity-50">
-                Aprobar pedido
-              </button>
-            </div>
+            <>
+              {clienteInfo?.modalidad_facturacion === 'sin_factura' && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-2">
+                  <p className="text-xs text-orange-600 font-medium">⚠️ Cliente sin factura — se registrará en Caja Chica al aprobar</p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => cambiarEstado('rechazado')} disabled={loading}
+                  className="flex-1 border border-red-200 text-red-600 rounded-lg py-2.5 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
+                  Rechazar
+                </button>
+                <button onClick={() => cambiarEstado('aprobado')} disabled={loading}
+                  className="flex-1 bg-[#00C896] text-white rounded-lg py-2.5 text-sm font-medium hover:bg-[#00b386] transition-colors disabled:opacity-50">
+                  Aprobar pedido
+                </button>
+              </div>
+            </>
           )}
 
           {pedido.estado === 'aprobado' && (
@@ -403,12 +440,20 @@ const PedidoDetalle = ({ pedido, onClose, onActualizado }) => {
           )}
 
           {pedido.estado === 'entregado' && (
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm text-gray-500">Este pedido fue entregado.</p>
-              <p className="text-sm text-[#00C896] font-medium mt-1">
-                Próximo paso → Generar factura
-              </p>
-            </div>
+            clienteInfo?.modalidad_facturacion === 'sin_factura' ? (
+              <button
+                onClick={registrarEnCajaChica}
+                disabled={loading}
+                className="w-full bg-[#00C896] text-white rounded-xl py-3 text-sm font-semibold hover:bg-[#00b386] transition-colors disabled:opacity-50"
+              >
+                💰 Registrar en Caja Chica
+              </button>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-sm text-gray-500">Este pedido fue entregado.</p>
+                <p className="text-sm text-[#00C896] font-medium mt-1">Próximo paso → Generar factura</p>
+              </div>
+            )
           )}
 
           <button onClick={onClose}
