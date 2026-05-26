@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      disable: true,
       registerType: 'prompt',
       workbox: {
         skipWaiting: true,
