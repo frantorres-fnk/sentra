@@ -70,6 +70,7 @@ serve(async (req) => {
           saldo_cc: clientes[0].saldo_cc ?? 0,
           empresa_id: clientes[0].empresa_id,
           lista_precio: clientes[0].lista_precio ?? 1,
+          vendedor_id: clientes[0].vendedor_id,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )

@@ -174,20 +174,13 @@ const Portal = () => {
       const total    = items.reduce((a, i) => a + i.precioDesc * i.cantidad, 0)
       const descuento = subtotal - total
 
-      const clienteRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/clientes?id=eq.${cliente?.cliente_id}&select=vendedor_id`,
-        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-      )
-      const clienteData = await clienteRes.json()
-      const vendedor_id = clienteData?.[0]?.vendedor_id || null
-
       const pedidoRes = await fetch(`${SUPABASE_URL}/rest/v1/pedidos`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           empresa_id: cliente?.empresa_id,
           cliente_id: cliente.cliente_id,
-          vendedor_id,
+          vendedor_id: cliente?.vendedor_id,
           estado: 'pendiente',
           subtotal: parseFloat(subtotal.toFixed(2)),
           descuento: parseFloat(descuento.toFixed(2)),
