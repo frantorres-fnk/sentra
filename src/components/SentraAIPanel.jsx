@@ -6,48 +6,71 @@ const SentraAIPanel = ({ onClose }) => {
   const [conversacion, setConversacion] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const consultarDatos = async () => {
-    const [
-      { data: clientes },
-      { data: stock },
-      { data: pedidos },
-      { data: cobros },
-      { data: proveedores },
-      { data: productos },
-      { data: operaciones },
-    ] = await Promise.all([
-      supabase.from('clientes').select('*').limit(100),
-      supabase.from('stock').select('*, productos(nombre, codigo, precio_venta, precio_costo)').limit(100),
-      supabase.from('pedidos').select('*, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)').order('fecha_pedido', { ascending: false }).limit(50),
-      supabase.from('cobros').select('*, clientes(razon_social)').order('created_at', { ascending: false }).limit(50),
-      supabase.from('proveedores').select('*').limit(50),
-      supabase.from('productos').select('*').limit(100),
-      supabase.from('operaciones_internas').select('*').order('created_at', { ascending: false }).limit(30),
-    ])
+  const consultarDatos = async (pregunta) => {
+    const q = pregunta.toLowerCase()
+    let contexto = ''
 
-    return `
-CLIENTES: ${JSON.stringify(clientes)}
-STOCK: ${JSON.stringify(stock)}
-PEDIDOS: ${JSON.stringify(pedidos)}
-COBROS: ${JSON.stringify(cobros)}
-PROVEEDORES: ${JSON.stringify(proveedores)}
-PRODUCTOS: ${JSON.stringify(productos)}
-CAJA CHICA: ${JSON.stringify(operaciones)}
-FECHA HOY: ${new Date().toLocaleDateString('es-AR')}
-    `
+    if (q.includes('cliente') || q.includes('debe') || q.includes('deuda') || q.includes('saldo') || q.includes('moroso')) {
+      const { data } = await supabase.from('clientes').select('razon_social, saldo_cc, activo, bloqueado, zona').order('saldo_cc', { ascending: false }).limit(20)
+      contexto += `\nCLIENTES:\n${JSON.stringify(data)}`
+    }
+    if (q.includes('stock') || q.includes('producto') || q.includes('inventario') || q.includes('queda')) {
+      const { data } = await supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo, precio_venta)').limit(30)
+      contexto += `\nSTOCK:\n${JSON.stringify(data)}`
+    }
+    if (q.includes('pedido') || q.includes('venta') || q.includes('vendí') || q.includes('vendi') || q.includes('pendiente')) {
+      const { data } = await supabase.from('pedidos').select('estado, total, fecha_pedido, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)').order('fecha_pedido', { ascending: false }).limit(20)
+      contexto += `\nPEDIDOS:\n${JSON.stringify(data)}`
+    }
+    if (q.includes('cobr') || q.includes('caja') || q.includes('pago') || q.includes('cobrado')) {
+      const { data } = await supabase.from('cobros').select('monto, estado, medio_pago, created_at, clientes(razon_social)').order('created_at', { ascending: false }).limit(20)
+      contexto += `\nCOBRANZAS:\n${JSON.stringify(data)}`
+    }
+    if (q.includes('proveedor') || q.includes('provee')) {
+      const { data } = await supabase.from('proveedores').select('razon_social, saldo_cc, telefono, email').limit(20)
+      contexto += `\nPROVEEDORES:\n${JSON.stringify(data)}`
+    }
+    if (q.includes('cotizacion') || q.includes('cotización') || q.includes('presupuesto')) {
+      const { data } = await supabase.from('cotizaciones').select('estado, total, vencimiento, clientes(razon_social)').order('created_at', { ascending: false }).limit(20)
+      contexto += `\nCOTIZACIONES:\n${JSON.stringify(data)}`
+    }
+
+    return contexto
   }
 
-  const enviarMensaje = async () => {
-    if (!mensaje.trim() || loading) return
-    const pregunta = mensaje.trim()
-    setMensaje('')
+  const generarResumenDiario = async () => {
+    const hoy = new Date().toISOString().split('T')[0]
+    const [
+      { data: pedidosHoy },
+      { data: cobrosHoy },
+      { data: stockCritico },
+      { data: cajaHoy },
+    ] = await Promise.all([
+      supabase.from('pedidos').select('estado, total, clientes(razon_social), usuarios!pedidos_vendedor_id_fkey(nombre)').gte('fecha_pedido', hoy).order('fecha_pedido', { ascending: false }),
+      supabase.from('cobros').select('monto, estado, medio_pago, clientes(razon_social)').gte('created_at', hoy),
+      supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo)').filter('cantidad', 'lte', 'stock_minimo').limit(10),
+      supabase.from('operaciones_internas').select('tipo, monto, concepto').gte('created_at', hoy),
+    ])
+    const preguntaResumen = `Generame un resumen ejecutivo del día de hoy con estos datos reales:
+PEDIDOS DE HOY: ${JSON.stringify(pedidosHoy)}
+COBROS DE HOY: ${JSON.stringify(cobrosHoy)}
+STOCK CRÍTICO: ${JSON.stringify(stockCritico)}
+CAJA CHICA HOY: ${JSON.stringify(cajaHoy)}
+El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crítico, movimientos de caja chica, conclusión del estado general. Sé conciso, usa emojis y formato claro.`
+    await enviarMensaje(preguntaResumen)
+  }
+
+  const enviarMensaje = async (textoDirecto) => {
+    const pregunta = (textoDirecto || mensaje).trim()
+    if (!pregunta || loading) return
+    if (!textoDirecto) setMensaje('')
     setLoading(true)
 
     const nuevaConversacion = [...conversacion, { rol: 'usuario', texto: pregunta }]
     setConversacion(nuevaConversacion)
 
     try {
-      const contexto = await consultarDatos()
+      const contexto = await consultarDatos(pregunta)
 
       const { data, error } = await supabase.functions.invoke('sentra-ai', {
         body: {
@@ -83,6 +106,7 @@ ${contexto}`,
   }
 
   const sugerencias = [
+    '📊 ¿Cómo viene el día?',
     '¿Quiénes son mis morosos?',
     '¿Qué productos tienen stock bajo?',
     '¿Cuánto vendí esta semana?',
@@ -152,6 +176,17 @@ ${contexto}`,
               </div>
             </div>
           )}
+        </div>
+
+        {/* Resumen del día */}
+        <div className="px-4 pt-3 shrink-0">
+          <button
+            onClick={generarResumenDiario}
+            disabled={loading}
+            className="w-full bg-[#0F1F3D] text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a2f5a] transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Generando resumen...' : '📊 Resumen del día'}
+          </button>
         </div>
 
         {/* Input */}
