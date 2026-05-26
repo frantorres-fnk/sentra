@@ -436,9 +436,8 @@ ${contexto}`,
               className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C896] resize-none"
             />
             <button
-              onClick={enviarMensaje}
-              disabled={!mensaje.trim() || loading}
-              className="bg-[#00C896] text-white w-11 h-11 rounded-xl flex items-center justify-center hover:bg-[#00b386] transition-colors disabled:opacity-40 shrink-0"
+              onPointerDown={(e) => { e.preventDefault(); if (mensaje.trim() && !loading) enviarMensaje() }}
+              className={`bg-[#00C896] text-white w-11 h-11 rounded-xl flex items-center justify-center transition-colors shrink-0 ${(!mensaje.trim() || loading) ? 'opacity-40' : 'hover:bg-[#00b386]'}`}
             >
               ➤
             </button>
