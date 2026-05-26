@@ -116,11 +116,18 @@ const Portal = () => {
   const fetchProductos = async () => {
     setLoadingProductos(true)
     try {
-      const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/productos?activo=eq.true&select=id,codigo,nombre,precio_venta,precio_lista_2,alicuota_iva&order=nombre.asc`,
-        { headers }
-      )
+      const empresaId = await fetchEmpresaId(cliente.cliente_id)
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal-productos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          empresa_id: empresaId,
+          lista_precio: cliente?.lista_precio || 1,
+        }),
+      })
       const data = await res.json()
       setProductos(Array.isArray(data) ? data : [])
     } catch {
