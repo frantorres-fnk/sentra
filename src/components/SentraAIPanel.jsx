@@ -36,46 +36,6 @@ const SentraAIPanel = ({ onClose }) => {
       contexto += `\nCOTIZACIONES:\n${JSON.stringify(data)}`
     }
 
-    if (q.includes('pdf') || q.includes('imprimir') || q.includes('imprimí') || q.includes('generame') || q.includes('generá')) {
-      if (q.includes('moroso') || (q.includes('debe') && q.includes('pdf'))) {
-        const { data } = await supabase.from('clientes')
-          .select('razon_social, saldo_cc, zona, telefono')
-          .gt('saldo_cc', 0)
-          .order('saldo_cc', { ascending: false })
-        await generarPDF('morosos', data || [], 'Clientes Morosos')
-        return ''
-      }
-      if (q.includes('pedido') || q.includes('venta')) {
-        const { data } = await supabase.from('pedidos')
-          .select('id, estado, total, fecha_pedido, clientes(razon_social)')
-          .order('fecha_pedido', { ascending: false })
-          .limit(50)
-        await generarPDF('pedidos', data || [], 'Reporte de Pedidos')
-        return ''
-      }
-      if (q.includes('stock') || q.includes('inventario')) {
-        const { data } = await supabase.from('stock')
-          .select('cantidad, stock_minimo, productos(nombre, codigo)')
-          .order('cantidad', { ascending: true })
-        await generarPDF('stock', data || [], 'Reporte de Stock')
-        return ''
-      }
-      if (q.includes('cliente')) {
-        const { data } = await supabase.from('clientes')
-          .select('razon_social, cuit, email, telefono, zona')
-          .eq('activo', true)
-          .order('razon_social')
-        await generarPDF('clientes', data || [], 'Listado de Clientes')
-        return ''
-      }
-    }
-
-    if (q.includes('export') || q.includes('excel') || q.includes('xlsx') || q.includes('descargar')) {
-      if (q.includes('venta') || q.includes('pedido')) { exportarExcel('ventas'); return '' }
-      if (q.includes('cliente')) { exportarExcel('clientes'); return '' }
-      if (q.includes('stock') || q.includes('inventario')) { exportarExcel('stock'); return '' }
-    }
-
     return contexto
   }
 
@@ -293,6 +253,44 @@ El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crí
     const nuevaConversacion = [...conversacion, { rol: 'usuario', texto: pregunta }]
     setConversacion(nuevaConversacion)
 
+    const q = pregunta.toLowerCase()
+
+    // Detección PDF — ejecutar directo sin AI
+    if (q.includes('pdf') || q.includes('imprimir') || q.includes('imprimí') || q.includes('generame') || q.includes('generá')) {
+      if (q.includes('moroso') || (q.includes('debe') && q.includes('pdf'))) {
+        const { data } = await supabase.from('clientes').select('razon_social, saldo_cc, zona, telefono').gt('saldo_cc', 0).order('saldo_cc', { ascending: false })
+        await generarPDF('morosos', data || [], 'Clientes Morosos')
+        setLoading(false)
+        return
+      }
+      if (q.includes('pedido') || q.includes('venta')) {
+        const { data } = await supabase.from('pedidos').select('id, estado, total, fecha_pedido, clientes(razon_social)').order('fecha_pedido', { ascending: false }).limit(50)
+        await generarPDF('pedidos', data || [], 'Reporte de Pedidos')
+        setLoading(false)
+        return
+      }
+      if (q.includes('stock') || q.includes('inventario')) {
+        const { data } = await supabase.from('stock').select('cantidad, stock_minimo, productos(nombre, codigo)').order('cantidad', { ascending: true })
+        await generarPDF('stock', data || [], 'Reporte de Stock')
+        setLoading(false)
+        return
+      }
+      if (q.includes('cliente')) {
+        const { data } = await supabase.from('clientes').select('razon_social, cuit, email, telefono, zona').eq('activo', true).order('razon_social')
+        await generarPDF('clientes', data || [], 'Listado de Clientes')
+        setLoading(false)
+        return
+      }
+    }
+
+    // Detección Excel — ejecutar directo sin AI
+    if (q.includes('excel') || q.includes('xlsx') || q.includes('exportar') || q.includes('exportá') || q.includes('descargar')) {
+      if (q.includes('venta') || q.includes('pedido')) { await exportarExcel('ventas'); setLoading(false); return }
+      if (q.includes('cliente')) { await exportarExcel('clientes'); setLoading(false); return }
+      if (q.includes('stock') || q.includes('inventario')) { await exportarExcel('stock'); setLoading(false); return }
+    }
+
+    // Consultar datos y llamar a la AI
     try {
       const contexto = await consultarDatos(pregunta)
 
