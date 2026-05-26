@@ -36,6 +36,7 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
     lista_precio: cliente.lista_precio || 1,
     descuento_cascada: cliente.descuento_cascada || '',
     vendedor_id: cliente.vendedor_id || '',
+    modalidad_facturacion: cliente.modalidad_facturacion || 'factura_b',
   })
 
   useEffect(() => {
@@ -291,6 +292,17 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
               </div>
             </div>
 
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Facturación</p>
+              <div>
+                {{
+                  factura_a:   <span className="text-xs font-medium px-3 py-1 rounded-full bg-blue-50 text-blue-600">Factura A</span>,
+                  factura_b:   <span className="text-xs font-medium px-3 py-1 rounded-full bg-green-50 text-green-600">Factura B</span>,
+                  sin_factura: <span className="text-xs font-medium px-3 py-1 rounded-full bg-red-50 text-red-500">Sin factura</span>,
+                }[cliente.modalidad_facturacion] || <span className="text-xs text-gray-400">-</span>}
+              </div>
+            </div>
+
             {/* PORTAL CLIENTE */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 border-b pb-1">Portal cliente</p>
@@ -530,6 +542,15 @@ const ClienteDetalle = ({ cliente, onClose, onActualizado }) => {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Modalidad de facturación</label>
+              <select name="modalidad_facturacion" value={form.modalidad_facturacion} onChange={handleChange} className={inputClass}>
+                <option value="factura_a">Factura A</option>
+                <option value="factura_b">Factura B</option>
+                <option value="sin_factura">Sin factura</option>
+              </select>
             </div>
 
             <div className="flex items-center gap-2">
