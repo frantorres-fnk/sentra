@@ -157,11 +157,15 @@ El resumen debe incluir: total vendido hoy, total cobrado, alertas de stock crí
 </body>
 </html>`
 
-    const ventana = window.open('', '_blank')
-    ventana.document.write(html)
-    ventana.document.close()
-    ventana.focus()
-    setTimeout(() => ventana.print(), 500)
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${titulo.toLowerCase().replace(/ /g, '-')}-sentra.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 
     setConversacion(prev => [...prev,
       { rol: 'ai', texto: `✅ PDF **${titulo}** generado con ${datos.length} registros. Se abrió la ventana de impresión.` }
