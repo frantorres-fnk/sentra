@@ -206,7 +206,7 @@ Sé conciso, usa emojis y formato claro.`
           <div className="space-y-4">
             <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
               <p className="text-sm text-gray-600">
-                👋 ¡Hola! Soy SENTRA AI. Puedo consultarte datos reales de tu negocio al instante. ¿En qué te ayudo?
+                👋 ¡Hola! Soy SENTRA AI v2. Puedo consultarte datos reales de tu negocio al instante. ¿En qué te ayudo?
               </p>
             </div>
             <p className="text-xs text-gray-400 font-medium px-1">Sugerencias</p>

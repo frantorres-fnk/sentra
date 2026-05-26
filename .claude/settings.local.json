@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npx vercel *)",
       "Bash(npm run *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force node_modules/.vite -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Carpetas eliminadas\")"
     ]
   }
 }
