@@ -184,7 +184,7 @@ Sé conciso, usa emojis y formato claro.`
   return (
     <div className="flex flex-col h-full">
 
-      {/* Header */}
+      {/* Header v2 */}
       <div className="mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#0F1F3D] rounded-xl flex items-center justify-center text-xl">
